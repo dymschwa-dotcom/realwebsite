@@ -1,0 +1,9 @@
+# Ignore the actual database files (Docker manages these)
+db_data/
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore environment files containing passwords
+.env

@@ -1,0 +1,6 @@
+[13-Feb-2026 08:48:40 UTC] PHP Warning:  Undefined array key "db_type" in /data0/influenced.club/public_html/install/index.php on line 106
+[13-Feb-2026 08:54:01 UTC] PHP Warning:  Undefined array key "db_host" in /data0/influenced.club/public_html/install/index.php on line 82
+[13-Feb-2026 08:54:01 UTC] PHP Warning:  Undefined array key "db_name" in /data0/influenced.club/public_html/install/index.php on line 82
+[13-Feb-2026 08:54:01 UTC] PHP Warning:  Undefined array key "db_user" in /data0/influenced.club/public_html/install/index.php on line 82
+[13-Feb-2026 08:54:01 UTC] PHP Warning:  Undefined array key "db_pass" in /data0/influenced.club/public_html/install/index.php on line 82
+[13-Feb-2026 08:54:01 UTC] PHP Warning:  Undefined array key "db_type" in /data0/influenced.club/public_html/install/index.php on line 106

@@ -1,0 +1,310 @@
+{
+    "policy_pages": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Policy Pages",
+        "hide_builder": true,
+        "element": {
+            "title": "text",
+            "slug": "title",
+            "details": "textarea-nic",
+            "modal": false,
+            "seo": true
+        }
+    },
+    "faq": {
+        "builder": true,
+        "name": "FAQ",
+        "content": {
+            "heading": "text"
+        },
+        "element": {
+            "question": "text",
+            "answer": "textarea",
+            "modal": false
+        }
+    },
+    "blog": {
+        "builder": true,
+        "name": "Blog Section",
+        "content": {
+            "heading": "text"
+        },
+        "element": {
+            "images": {
+                "image": {
+                    "size": "860x450",
+                    "thumb": "430x225"
+                }
+            },
+            "title": "text",
+            "slug": "title",
+            "description": "textarea-nic",
+            "modal": false,
+            "seo": true
+        }
+    },
+    "breadcrumb": {
+        "builder": true,
+        "name": "Breadcrumb Section",
+        "content": {
+            "images": {
+                "image": {
+                    "size": "1920x210"
+                }
+            }
+        }
+    },
+    "social_icon": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Social Icons",
+        "element": {
+            "social_icon": "icon",
+            "url": "text",
+            "modal": true
+        }
+    },
+    "contact_us": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Contact Us",
+        "content": {
+            "images": {
+                "image": {
+                    "size": "648x826"
+                }
+            },
+            "heading": "text",
+            "short_description": "text",
+            "email_address": "text",
+            "contact_details": "text",
+            "contact_number": "text",
+            "map_link": "text"
+        }
+    },
+    "brand_kyc": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Brand KYC Content",
+        "content": {
+            "required": "text",
+            "pending": "text",
+            "reject": "text"
+        }
+    },
+    "influencer_kyc": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Influencer KYC Content",
+        "content": {
+            "required": "text",
+            "pending": "text",
+            "reject": "text"
+        }
+    },
+    "banner": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Banner",
+        "content": {
+            "images": {
+                "image": {
+                    "size": "625x495"
+                }
+            },
+            "heading": "text",
+            "subheading": "text",
+            "button_name": "text",
+            "button_url": "text"
+        }
+    },
+    "partner": {
+        "builder": true,
+        "name": "Partner",
+        "element": {
+            "images": {
+                "image": {
+                    "size": "120x30"
+                }
+            },
+            "modal": true
+        }
+    },
+    "top_influencer": {
+        "builder": true,
+        "name": "Top Influencer",
+        "content": {
+            "heading": "text"
+        }
+    },
+    "category": {
+        "builder": true,
+        "name": "Category",
+        "content": {
+            "heading": "text"
+        }
+    },
+    "how_work": {
+        "builder": true,
+        "name": "How it Work",
+        "content": {
+            "heading": "text",
+            "button_name": "text",
+            "button_url": "text"
+        },
+        "element": {
+            "images": {
+                "image": {
+                    "size": "30x30"
+                }
+            },
+            "heading": "text",
+            "subheading": "text",
+            "modal": true
+        }
+    },
+    "feature": {
+        "builder": true,
+        "name": "Feature Section",
+        "content": {
+            "images": {
+                "image": {
+                    "size": "415x335"
+                }
+            },
+            "heading": "text"
+        },
+        "element": {
+            "images": {
+                "image": {
+                    "size": "30x30"
+                }
+            },
+            "title": "text",
+            "description": "textarea",
+            "modal": true
+        }
+    },
+    "counter": {
+        "builder": true,
+        "name": "Counter",
+        "element": {
+            "title": "text",
+            "counter_digit": "text",
+            "counter_symbol": "text",
+            "modal": true
+        }
+    },
+    "testimonial": {
+        "builder": true,
+        "name": "Testimonial",
+        "content": {
+            "heading": "text"
+        },
+        "element": {
+            "images": {
+                "image": {
+                    "size": "100x100"
+                }
+            },
+            "quote": "textarea",
+            "name": "text",
+            "designation": "text",
+            "modal": false
+        }
+    },
+    "cta": {
+        "builder": true,
+        "name": "Call to Action",
+        "content": {
+            "heading": "text",
+            "subheading": "text",
+            "button_name": "text",
+            "button_url": "text"
+        }
+    },
+    "footer": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Footer Section",
+        "content": {
+            "description": "text"
+        }
+    },
+    "brand_login": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Brand Login Page",
+        "content": {
+            "heading": "text",
+            "subheading": "text",
+            "title": "text",
+            "short_description": "text"
+        }
+    },
+    "brand_register": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Brand Register Page",
+        "content": {
+            "heading": "text",
+            "subheading": "text",
+            "title": "text",
+            "short_description": "text"
+        }
+    },
+    "influencer_login": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Influencer Login Page",
+        "content": {
+            "heading": "text",
+            "subheading": "text",
+            "title": "text",
+            "short_description": "text"
+        }
+    },
+    "influencer_register": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Influencer Register Page",
+        "content": {
+            "heading": "text",
+            "subheading": "text",
+            "title": "text",
+            "short_description": "text"
+        }
+    },
+    "ongoing_campaign": {
+        "builder": true,
+        "name": "Ongoing Campaign",
+        "content": {
+            "heading": "text"
+        }
+    },
+    "empty_data": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Empty Data Image",
+        "content": {
+            "images": {
+                "image": {
+                    "size": "256x256"
+                }
+            }
+        }
+    },
+    "banned": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Banned",
+        "content": {
+            "images": {
+                "image": {
+                    "size": "360x370"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,172 @@
+/* fallback */
+@font-face {
+    font-family: 'Material Icons Outlined';
+    font-style: normal;
+    font-weight: 400;
+    src: url(https://fonts.gstatic.com/s/materialiconsoutlined/v109/gok-H7zzDkdnRel8-DQ6KAXJ69wP1tGnf4ZGhUce.woff2) format('woff2');
+  }
+  
+  .material-icons-outlined {
+    font-family: 'Material Icons Outlined';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -moz-font-feature-settings: 'liga';
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  .file-container .file-upload > div > i {
+	font-size: 3.125em;
+	color: #1976D2 !important;
+}
+.file-container > table > tbody > tr > td > img {
+	border-radius: 5px;
+	box-shadow: var(--shadow);
+	width: 75px;
+}
+:root {
+    --file-container-bg: #eee;
+    --file-bg: #f8f8f8;
+    --file-border-color: #606060;
+    --file-rounded: 15px;
+    --file-color: #2b2b2b;
+    --table-border-color: #dbdbdb;
+    --delete-button-bg: #f53636;
+    --delete-button-color: #fff;
+    --font-size: 0.875em;
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --shadow: 0px 8px 15px -8px rgba(0, 0, 0, 0.5);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.file-container {
+	max-width: 502px;
+	font-family: var(--font-family);
+	width: 100%;
+}
+
+.file-container .file-upload {
+    width: 100%;
+    display: flex;
+    background-color: var(--file-container-bg);
+    border-radius: var(--file-rounded);
+    transition: all 0.3s;
+}
+
+.file-container .file-upload > div {
+	width: 100%;
+	background-color: #fff;
+	padding: 25px;
+	/* margin: 25px; */
+	border-radius: 10px;
+	border: 1px dashed #ddd;
+	text-align: center;
+	cursor: pointer;
+}
+
+.browse-file{
+    color: #1976D2 !important;
+    font-weight: 600;
+    font-size: 14px;
+}
+.file-container .file-upload>div>i {
+    font-size: 3.125em;
+    color: var(--file-color);
+}
+
+.file-container .file-upload>div>p,
+.file-container .file-upload>div span,
+.file-container .file-upload>div div {
+    font-size: var(--font-size);
+    line-height: 30px;
+    color: var(--file-color);
+}
+
+.file-container .file-upload>div>div {
+    width: max-content;
+    padding: 0 10px;
+    margin: 0 auto;
+    border: 1px solid var(--file-border-color);
+    border-radius: 8px;
+}
+
+.file-container>table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size);
+    margin-top: 20px;
+}
+
+.file-container>table th,
+.file-container>table td {
+    border-bottom: 1px solid var(--table-border-color);
+    padding: 8px;
+    text-align: left;
+}
+
+.file-container>table>tbody>tr>td:nth-child(1) {
+    font-weight: bold;
+}
+
+.file-container>table>tbody>tr>td:nth-child(2) {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: 1px;
+}
+
+.file-container>table>tbody>tr>td:nth-child(3) {
+    text-align: center;
+}
+
+.file-container>table>tbody>tr>td>img {
+    border-radius: 5px;
+    box-shadow: var(--shadow);
+}
+
+.file-container>table>tbody>tr>td.no-file {
+    text-align: center;
+    font-weight: normal;
+}
+
+.file-container>table>tbody>tr>td>i {
+    font-size: 1.125em;
+}
+
+.file-container>table button {
+    background-color: var(--delete-button-bg);
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.file-container>table button:hover {
+    box-shadow: var(--shadow);
+}
+
+.file-container>table button>i {
+    color: var(--delete-button-color);
+    font-size: 1.125em;
+}
+
+.file-container .text{
+    font-size: 0.875rem !important;
+    color: #6d6d6d !important;
+}
