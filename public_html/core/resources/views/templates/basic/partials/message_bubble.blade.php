@@ -30,45 +30,25 @@
                     
                     <p class="small mb-1 fw-bold text-muted text-uppercase">@lang('Budget')</p>
                     <h5 class="m-0 text-success">
-                        {{ gs('cur_sym') }}{{ showAmount($message->participant?->budget ?? 0) }}
+                        {{ showAmount($message->participant?->budget ?? 0) }}
                     </h5>
                 </div>
 
                 <div class="d-flex flex-column gap-2">
-                    {{-- IF VIEWER IS BRAND: Show Action Buttons --}}
-                    @if($currBrand && $message->sender_type == 'influencer')
-                        @if($message->participant?->status == 0) {{-- Status: Pending --}}
-                            <div class="d-flex gap-2">
-                                <button onclick="updateProposalStatus({{ $message->participant->id }}, 'accept')" class="btn btn-sm btn-success flex-grow-1 fw-bold">
-                                    <i class="las la-check"></i> @lang('Accept')
-                                </button>
-                                <button onclick="updateProposalStatus({{ $message->participant->id }}, 'reject')" class="btn btn-sm btn-outline-danger flex-grow-1">
-                                    @lang('Reject')
-                                </button>
-                            </div>
-                        @elseif($message->participant?->status == 1)
-                            <div class="badge bg-success w-100 p-2 py-2"><i class="las la-check-circle"></i> @lang('Contract Active')</div>
-                        @elseif($message->participant?->status == 3)
-                            <div class="badge bg-danger w-100 p-2 py-2"><i class="las la-times-circle"></i> @lang('Proposal Rejected')</div>
-                        @endif
+                    @if(@$message->participant?->campaign)
+                        <a href="{{ route('user.campaign.detail', $message->participant->campaign->slug) }}" 
+                           class="btn btn-sm {{ $isSender ? 'btn--dark' : 'btn--base' }} w-100 fw-bold mb-1">
+                            <i class="las la-info-circle"></i> @lang('View Proposal')
+                        </a>
+                    @endif
 
-                    {{-- IF VIEWER IS INFLUENCER: Show Status Only --}}
-                    @else
-                        <div class="text-center">
-                            @if($message->participant?->status == 0)
-                                <span class="badge bg-warning text-dark w-100 p-2 py-2">
-                                    <i class="las la-clock"></i> @lang('Pending Brand Approval')
-                                </span>
-                            @elseif($message->participant?->status == 1)
-                                <span class="badge bg-success w-100 p-2 py-2">
-                                    <i class="las la-check-double"></i> @lang('Proposal Accepted')
-                                </span>
-                            @elseif($message->participant?->status == 3)
-                                <span class="badge bg-danger w-100 p-2 py-2">
-                                    <i class="las la-times"></i> @lang('Proposal Declined')
-                                </span>
-                            @endif
-                        </div>
+                    {{-- Status Indicator Only --}}
+                    @if($message->participant?->status == 1)
+                        <div class="badge bg-success w-100 p-2 py-2"><i class="las la-check-circle"></i> @lang('Contract Active')</div>
+                    @elseif($message->participant?->status == 3)
+                        <div class="badge bg-danger w-100 p-2 py-2"><i class="las la-times-circle"></i> @lang('Proposal Rejected')</div>
+                    @elseif($message->participant?->status == 0)
+                        <div class="badge bg-warning text-dark w-100 p-2 py-2"><i class="las la-clock"></i> @lang('Awaiting Approval')</div>
                     @endif
                 </div>
             </div>
@@ -83,7 +63,7 @@
                 
                 <div class="p-2 mb-3 rounded {{ $isSender ? 'bg-white text-dark' : 'bg-light' }} border text-center">
                     <h6 class="mb-1 text--base">{{ __($message->campaign->title) }}</h6>
-                    <h5 class="m-0 text-success">{{ gs('cur_sym') }}{{ showAmount($message->campaign->budget) }}</h5>
+                    <h5 class="m-0 text-success">{{ showAmount($message->campaign->budget) }}</h5>
                 </div>
 
                 <div class="d-flex flex-column gap-2">

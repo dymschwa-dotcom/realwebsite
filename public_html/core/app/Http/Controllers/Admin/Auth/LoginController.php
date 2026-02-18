@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Admin\Auth;
 
 use App\Http\Controllers\Controller;
@@ -94,7 +95,7 @@ class LoginController extends Controller
     public function logout(Request $request)
     {
         $this->guard('admin')->logout();
-        $request->session()->invalidate();
         return $this->loggedOut($request) ?: redirect($this->redirectTo);
     }
 }
+

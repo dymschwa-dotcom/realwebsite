@@ -2,9 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CampaignController; // Global Shared Controller
+use App\Http\Controllers\WorkspaceController; // Unified Workspace Controller
 use App\Http\Controllers\User\CampaignController as UserCampaignController; // Brand Dashboard
 use App\Http\Controllers\Influencer\CampaignController as InfluencerCampaignController; // Influencer Dashboard
 use App\Http\Controllers\Influencer\InfluencerController as InfluencerDashboardController;
+use App\Http\Controllers\Auth\LoginController;
 
 /*
 |--------------------------------------------------------------------------
@@ -40,13 +42,21 @@ Route::controller('InfluencerController')->group(function () {
 
 // --- SHARED CAMPAIGN WORKSPACE (BRAND & INFLUENCER) ---
 Route::middleware('auth:web,influencer')->group(function () {
-    Route::controller(CampaignController::class)->group(function () {
+    Route::controller(WorkspaceController::class)->prefix('workspace')->name('workspace.')->group(function () {
+            Route::get('view/{id}', 'view')->name('view');
+        Route::post('send', 'sendMessage')->name('send');
+        Route::post('proposal-update', 'updateProposal')->name('proposal.update');
+        Route::get('download/{file}', 'download')->name('download');
+        Route::get('get-new-messages/{id}', 'getNewMessages')->name('getNewMessages');
+        });
+
+        Route::controller(CampaignController::class)->group(function () {
         Route::post('campaign/upload-work', 'sendMessage')->name('campaign.file.upload');
         Route::post('campaign/update-file-status', 'updateWorkStatus')->name('campaign.file.status');
         Route::get('campaign/download-file/{file}', 'downloadAttachment')->name('campaign.file.download');
         Route::post('campaign/proposal-update', 'updateStatus')->name('campaign.proposal.update');
+        });
     });
-});
 
 // --- AUTHENTICATED BRAND (USER) ---
 Route::middleware('auth')->group(function () {
@@ -64,7 +74,6 @@ Route::middleware('auth')->group(function () {
 
     // Brand Dashboard & Profile
     Route::name('user.')->group(function () {
-        
         Route::controller('User\UserController')->group(function () {
             Route::get('dashboard', 'home')->name('home');
             Route::get('profile-setting', 'profile')->name('profile.setting');
@@ -75,6 +84,10 @@ Route::middleware('auth')->group(function () {
 
         // Campaign Management - POINTING TO UserCampaignController
         Route::controller(UserCampaignController::class)->prefix('campaign')->name('campaign.')->group(function () {
+            Route::get('create/{step?}/{slug?}', 'create')->name('create');
+            Route::get('previous/{step}/{slug}', 'previous')->name('previous');
+            Route::post('basic/{slug?}', 'basic')->name('basic');
+            Route::post('content/{slug}', 'content')->name('content');
             Route::get('all', 'history')->name('index');
             Route::get('pending', 'history')->name('pending');
             Route::get('approved', 'history')->name('approved');
@@ -88,10 +101,10 @@ Route::middleware('auth')->group(function () {
         // MESSAGING SYSTEM (BRAND SIDE)
         Route::prefix('messages')->name('conversation.')->group(function () {
             Route::get('/', [CampaignController::class, 'conversationIndex'])->name('index');
-            Route::get('view/{id}', [CampaignController::class, 'viewConversation'])->name('view');
-            Route::post('send', [CampaignController::class, 'sendMessage'])->name('send');
-            Route::get('download/{file}', [CampaignController::class, 'downloadAttachment'])->name('download');
-            Route::get('get-new-messages/{id}', [CampaignController::class, 'getNewMessages'])->name('getNewMessages');
+            Route::get('view/{id}', [WorkspaceController::class, 'view'])->name('view');
+            Route::post('send', [WorkspaceController::class, 'sendMessage'])->name('send');
+            Route::get('download/{file}', [WorkspaceController::class, 'download'])->name('download');
+            Route::get('get-new-messages/{id}', [WorkspaceController::class, 'getNewMessages'])->name('getNewMessages');
             Route::post('work-update', [CampaignController::class, 'updateWorkStatus'])->name('work.update');
         });
 
@@ -100,12 +113,24 @@ Route::middleware('auth')->group(function () {
             Route::get('campaign/invite/{id}', 'inviteForm')->name('campaign.invite.form');
             Route::post('campaign/invite', 'invite')->name('campaign.invite');
             Route::post('campaign/complete', 'complete')->name('campaign.complete');
-        });
     });
+});
 });
 
 // --- AUTHENTICATED INFLUENCER ---
 Route::middleware('auth:influencer')->name('influencer.')->prefix('influencer')->group(function () {
+
+    // Campaign Wizard for Influencers (Custom Package Replacement)
+    Route::controller(UserCampaignController::class)->prefix('campaign/create')->name('campaign.create.')->group(function () {
+        Route::get('/{step?}/{slug?}', 'create')->name('wizard');
+        Route::get('previous/{step}/{slug}', 'previous')->name('previous');
+        Route::post('basic/{slug?}', 'basic')->name('basic');
+        Route::post('content/{slug}', 'content')->name('content');
+        Route::post('description/{slug}', 'description')->name('description');
+        Route::post('requirement/{slug}', 'requirement')->name('requirement');
+        Route::post('budget/{slug}', 'budget')->name('budget');
+    });
+
     // Campaign Management - POINTING TO InfluencerCampaignController
     Route::controller(InfluencerCampaignController::class)->group(function () {
         
@@ -125,15 +150,15 @@ Route::middleware('auth:influencer')->name('influencer.')->prefix('influencer')-
 
         Route::post('campaign/invite/submit', 'inviteSubmit')->name('campaign.invite.submit');
         Route::post('campaign/proposal/submit', 'inviteSubmit')->name('campaign.proposal.submit');
-   
+
 
         // MESSAGING SYSTEM (INFLUENCER SIDE)
         Route::prefix('messages')->name('conversation.')->group(function () {
             Route::get('/', [CampaignController::class, 'conversationIndex'])->name('index');
-            Route::get('view/{id}', [CampaignController::class, 'viewConversation'])->name('view');
-            Route::post('send', [CampaignController::class, 'sendMessage'])->name('send');
-            Route::get('download/{file}', [CampaignController::class, 'downloadAttachment'])->name('download');
-            Route::get('get-new-messages/{id}', [CampaignController::class, 'getNewMessages'])->name('getNewMessages');
+            Route::get('view/{id}', [WorkspaceController::class, 'view'])->name('view');
+            Route::post('send', [WorkspaceController::class, 'sendMessage'])->name('send');
+            Route::get('download/{file}', [WorkspaceController::class, 'download'])->name('download');
+            Route::get('get-new-messages/{id}', [WorkspaceController::class, 'getNewMessages'])->name('getNewMessages');
             Route::post('work-update', [CampaignController::class, 'updateWorkStatus'])->name('work.update');
         });
         
@@ -153,3 +178,5 @@ Route::controller('SiteController')->group(function () {
     Route::get('/{slug}', 'pages')->name('pages');
     Route::get('/', 'index')->name('home');
 });
+
+Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');

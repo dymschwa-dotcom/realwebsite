@@ -1,9 +1,19 @@
 @extends($activeTemplate . 'layouts.master')
 @section('content')
     @php
+        $isInfluencer = auth()->guard('influencer')->check();
         $campaignSteps = ['basic', 'content', 'description', 'requirement', 'budget'];
+
+        // If influencer, we skip 'requirement'
+        if ($isInfluencer) {
+            $campaignSteps = ['basic', 'content', 'description', 'budget'];
+        }
+
         $stepName = array_slice($campaignSteps, 0, $step + 1);
-        $currentStep = $campaignSteps[$step];
+
+        // Adjust current step mapping for influencer because index might shift
+        // If $step is 4 (budget in brand), it might need to be 3 in influencer array
+        $currentStep = $campaignSteps[$step] ?? $campaignSteps[count($campaignSteps)-1];
     @endphp
 
     <div class="card custom--card">
@@ -13,22 +23,35 @@
                     <div class="campaign-loader mx-auto"></div>
                 </div>
                 <div class="create-heading mb-4 text-center">
-                    <h3 class="mb-2 text-center">{{ __($pageTitle) }}</h3>
-                    <p>@lang('Follow the simple 5 steps to create your campaign.')</p>
+                    <h3 class="mb-2 text-center">{{ $isInfluencer ? __('Custom Proposal') : __($pageTitle) }}</h3>
+                    <p>{{ $isInfluencer ? __('Outline your proposal in simple steps.') : __('Follow the simple 5 steps to create your campaign.') }}</p>
                 </div>
 
                 <div class="form-steps">
                     @foreach ($campaignSteps as $key => $campaignStep)
+                        @php
+                            // Mapping for influencer step indices to match controller response
+                            $displayKey = $key;
+                            if($isInfluencer && $key == 3) $displayKey = 4; // Force budget to show as index 4 for influencer
+                        @endphp
                         <div class="form-steps__step {{ $campaignStep }} form-steps__step--{{ in_array($campaignStep, $stepName) ? 'active' : 'incomplete' }}">
                             <a class="form-steps__step-link" href="javascript:void(0)"></a>
                             <div class="form-steps__step-circle">
                                 <span class="form-steps__step-number">{{ $key + 1 }} </span>
                             </div>
-                            <span class="form-step__step-name text-capitalize">{{ $campaignStep }}</span>
+                            <span class="form-step__step-name text-capitalize">
+                                @if($isInfluencer)
+                                    @if($campaignStep == 'description') @lang('Creative Vision')
+                                    @elseif($campaignStep == 'budget') @lang('Fee & Timeline')
+                                    @else {{ __($campaignStep) }} @endif
+                                @else
+                                    {{ __($campaignStep) }}
+                                @endif
+                            </span>
                         </div>
-                    @endforeach
-                </div>
+                @endforeach
             </div>
+        </div>
             <div class="tab-content mt-5" id="myTabContent">
                 @foreach ($campaignSteps as $campaignStep)
                     <div class="tab-pane fade @if (!in_array($campaignStep, $stepName)) disabled @endif @if ($currentStep == $campaignStep) show active @endif" id="pills-{{ $campaignStep }}" role="tabpanel" aria-labelledby="pills-{{ $campaignStep }}-tab">
@@ -44,6 +67,11 @@
 
 @push('style-lib')
     <link type="text/css" href="{{ asset('assets/admin/css/daterangepicker.css') }}" rel="stylesheet" />
+    <style>
+        .daterangepicker {
+            z-index: 1051 !important;
+        }
+    </style>
 @endpush
 
 @push('script-lib')
@@ -59,7 +87,11 @@
 
             // Initialize global slug
             let slug = "{{ @$campaign->slug }}";
-            let baseUrl = "{{ route('user.campaign.create') }}";
+            let isInfluencer = "{{ auth()->guard('influencer')->check() ? 1 : 0 }}" == "1";
+            
+            let baseUrl = isInfluencer ? 
+                "{{ route('influencer.campaign.create.wizard') }}" : 
+                "{{ route('user.campaign.create') }}";
 
             function initNicEditor() {
                 $(".nicEdit").each(function(index) {
@@ -89,13 +121,7 @@
                     if (!slug) {
                             console.error("CRITICAL: No slug returned from server!");
                 }
-                // 1. Capture the new slug immediately
-                if (response.campaign_slug) {
-                    slug = response.campaign_slug;
-                }
-                
                 let step = response.step;
-
                 // 2. Update Progress Circles
                 $('.form-steps__step').removeClass('form-steps__step--active');
                 stepsArray.forEach(s => {
@@ -115,9 +141,28 @@
                 window.history.pushState({}, "", newUrl);
 
                 // 6. Re-init UI elements
-                productCount();
+                if (typeof productCount === "function") productCount();
                 if (typeof initNicEditor === "function") initNicEditor();
+                if (typeof datePicker === "function") datePicker();
             }
+
+            function datePicker() {
+                console.log("Initializing DatePicker...");
+                if ($(".datepicker-here").length > 0) {
+                    $('.datepicker-here').daterangepicker({
+                        singleDatePicker: true,
+                        showDropdowns: true,
+                        autoApply: true,
+                        locale: {
+                            format: 'YYYY-MM-DD'
+                        }
+                    }).on('show.daterangepicker', function(ev, picker) {
+                        console.log("Picker shown");
+                    });
+                }
+            }
+
+            datePicker();
 
             // Step 0: Basic
             $(document).on('submit', '#basicForm', function(e) {
@@ -127,6 +172,12 @@
                 let postUrl = slug ? 
                     "{{ route('user.campaign.basic', ':slug') }}".replace(':slug', slug) : 
                     "{{ route('user.campaign.basic') }}";
+
+                if (isInfluencer) {
+                    postUrl = slug ? 
+                        "{{ route('influencer.campaign.create.basic', ':slug') }}".replace(':slug', slug) : 
+                        "{{ route('influencer.campaign.create.basic') }}";
+                }
 
                 $.ajax({
                     headers: {"X-CSRF-TOKEN": "{{ csrf_token() }}"},
@@ -160,7 +211,9 @@
                 }
 
                 $('.campaign-loader-wrapper').removeClass('d-none');
-                let actionUrl = "{{ route('user.campaign.content', ':slug') }}".replace(':slug', slug);
+                let actionUrl = isInfluencer ? 
+                    "{{ route('influencer.campaign.create.content', ':slug') }}".replace(':slug', slug) :
+                    "{{ route('user.campaign.content', ':slug') }}".replace(':slug', slug);
                 
                 $.ajax({
                     headers: {"X-CSRF-TOKEN": "{{ csrf_token() }}"},
@@ -190,7 +243,9 @@
                 }
 
                 $('.campaign-loader-wrapper').removeClass('d-none');
-                let actionUrl = "{{ route('user.campaign.description', ':slug') }}".replace(':slug', slug);
+                let actionUrl = isInfluencer ? 
+                    "{{ route('influencer.campaign.create.description', ':slug') }}".replace(':slug', slug) :
+                    "{{ route('user.campaign.description', ':slug') }}".replace(':slug', slug);
 
                 $.ajax({
                     headers: {"X-CSRF-TOKEN": "{{ csrf_token() }}"},
@@ -203,18 +258,18 @@
                         $('.campaign-loader-wrapper').addClass('d-none');
                         if (response.status == 'success') {
                             notify('success', 'Description and image saved!');
-                            updateWizard(response, ['basic', 'content', 'description', 'requirement']);
+                            let steps = isInfluencer ? ['basic', 'content', 'description', 'budget'] : ['basic', 'content', 'description', 'requirement'];
+                            updateWizard(response, steps);
                         }
                     }
                 });
             });
 
-            // Step 3: Requirement
+            // Step 3: Requirement (Brands Only)
             $(document).on('submit', '#requirementForm', function(e) {
                 e.preventDefault();
                 $('.campaign-loader-wrapper').removeClass('d-none');
                 let route = "{{ route('user.campaign.requirement', ':slug') }}".replace(':slug', slug);
-
                 $.ajax({
                     headers: {"X-CSRF-TOKEN": "{{ csrf_token() }}"},
                     url: route,
@@ -238,7 +293,9 @@
             $(document).on('submit', '#budgetForm', function(e) {
                 e.preventDefault();
                 $('.campaign-loader-wrapper').removeClass('d-none');
-                let route = "{{ route('user.campaign.budget', ':slug') }}".replace(':slug', slug);
+                let route = isInfluencer ? 
+                    "{{ route('influencer.campaign.create.budget', ':slug') }}".replace(':slug', slug) :
+                    "{{ route('user.campaign.budget', ':slug') }}".replace(':slug', slug);
 
                 $.ajax({
                     headers: {"X-CSRF-TOKEN": "{{ csrf_token() }}"},
@@ -259,49 +316,43 @@
             });
 
             // Previous Button Logic
-            $(document).on('click', '[class^="pre"]', function() {
-                let targetStep = $(this).data('pre');
-                $('.campaign-loader-wrapper').removeClass('d-none');
+            $(document).on('click', '.preContentBtn, .preDescBtn, .preReqBtn, .preBudgetBtn', function() {
+                let targetStepName = $(this).data('pre');
+                let steps = isInfluencer ? ['basic', 'content', 'description', 'budget'] : ['basic', 'content', 'description', 'requirement', 'budget'];
+                let targetStepIndex = steps.indexOf(targetStepName);
 
-                let preUrl = "{{ route('user.campaign.previous', ['', '']) }}/" + targetStep + "/" + slug;
+                if (targetStepIndex === -1) {
+                    notify('error', 'Invalid step');
+                    return;
+                }
+                
+                $('.campaign-loader-wrapper').removeClass('d-none');
+                
+                let prevUrl = isInfluencer ? 
+                    "{{ route('influencer.campaign.create.previous', ['step' => 'STEP_HOLDER', 'slug' => 'SLUG_HOLDER']) }}" :
+                    "{{ route('user.campaign.previous', ['step' => 'STEP_HOLDER', 'slug' => 'SLUG_HOLDER']) }}";
+                
+                prevUrl = prevUrl.replace('STEP_HOLDER', targetStepIndex).replace('SLUG_HOLDER', slug);
 
                 $.ajax({
-                    type: "GET",
-                    url: preUrl,
+                    url: prevUrl,
+                    method: "GET",
+                    headers: {"X-Requested-With": "XMLHttpRequest"},
                     success: function(response) {
                         $('.campaign-loader-wrapper').addClass('d-none');
-                        updateWizard(response, ['basic', 'content', 'description', 'requirement', 'budget'].slice(0, response.step + 1));
+                        updateWizard(response, getStepNamesUpTo(response.step));
+                    },
+                    error: function() {
+                        $('.campaign-loader-wrapper').addClass('d-none');
+                        notify('error', 'Could not load previous step.');
                     }
                 });
             });
 
-            function productCount() {
-                $(".product-qty").each(function() {
-                    let qtyValue = $(this).find(".product-qty__value");
-                    $(this).find(".product-qty__increment").off('click').on("click", function() {
-                        qtyValue.val(parseFloat(qtyValue.val()) + 1).trigger("change");
-                    });
-                    $(this).find(".product-qty__decrement").off('click').on("click", function() {
-                        let val = parseFloat(qtyValue.val());
-                        if (val > 1) qtyValue.val(val - 1).trigger("change");
-                    });
-                });
+            function getStepNamesUpTo(stepIndex) {
+                let steps = isInfluencer ? ['basic', 'content', 'description', 'budget'] : ['basic', 'content', 'description', 'requirement', 'budget'];
+                return steps.slice(0, stepIndex + 1);
             }
-
-            function dateRange() {
-                let minDate = `{{ now()->format('Y-m-d') }}`;
-                if($.fn.daterangepicker) {
-                    $('input[name="start_date"], input[name="end_date"]').daterangepicker({
-                        "singleDatePicker": true,
-                        "minDate": minDate,
-                        "locale": {"format": "YYYY-MM-DD"}
-                    });
-                }
-            }
-
-            productCount();
-            dateRange();
-
         })(jQuery);
     </script>
 @endpush

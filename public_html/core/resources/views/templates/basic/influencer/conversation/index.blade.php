@@ -17,7 +17,7 @@
                                 
                                 <div class="avatar-wrapper position-relative">
                                     {{-- Brand's Profile Image --}}
-                                    <img src="{{ getImage(getFilePath('userProfile') . '/' . $conversation->user->image, getFileSize('userProfile')) }}" 
+                                    <img src="{{ getImage(getFilePath('brand') . '/' . $conversation->user->image, getFileSize('brand')) }}" 
                                          class="rounded-circle border" 
                                          style="width: 50px; height: 50px; object-fit: cover;">
                                 </div>

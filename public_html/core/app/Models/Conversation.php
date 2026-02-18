@@ -12,6 +12,7 @@ class Conversation extends Model
     protected $fillable = [
         'user_id',
         'influencer_id',
+        'campaign_id',
     ];
 
     /**
@@ -36,6 +37,14 @@ class Conversation extends Model
     public function messages()
     {
         return $this->hasMany(Message::class, 'conversation_id');
+    }
+
+    /**
+     * Link to a campaign if this conversation started from one
+     */
+    public function campaign()
+    {
+        return $this->belongsTo(Campaign::class, 'campaign_id');
     }
 
     /**

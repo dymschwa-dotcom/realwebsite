@@ -59,7 +59,7 @@
                             </td>
                             <td>
                                 @if ($campaign->budget > 0)
-                                    <span>{{ $general->cur_sym }}{{ showAmount($campaign->budget) }}</span>
+                                    <span>{{ showAmount($campaign->budget) }}</span>
                                 @else
                                     <span class="badge badge--info">@lang('Gift Based')</span>
                                 @endif

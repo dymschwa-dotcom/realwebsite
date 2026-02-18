@@ -1,6 +1,10 @@
 <form id="basicForm" enctype="multipart/form-data">
-    @csrf
+        @csrf
+    @php
+        $isInfluencer = auth()->guard('influencer')->check();
+    @endphp
 
+    @if(!$isInfluencer)
     <div class="form-group common-style mb-4">
         <div class="create-header mb-4">
             <label class="form--label mb-0"> @lang('Campaign Type') <span class="text--danger">*</span></label>
@@ -29,12 +33,20 @@
 
         </div>
     </div>
+    @else
+        <input type="hidden" name="campaign_type" value="invite">
+    @endif
 
     <div class="form-group common-style mb-4">
         <div class="create-header mb-4">
             <label class="form--label mb-0">@lang('Payment Type') <span
                       class="text--danger">*</span></label>
-            <p class="campaign-desc"> @lang('Influencers have the option to participate in either Paid campaigns or Gift campaigns')
+            <p class="campaign-desc"> 
+                @if($isInfluencer)
+                    @lang('Are you looking for a paid collaboration or a product exchange?')
+                @else
+                    @lang('Influencers have the option to participate in either Paid campaigns or Gift campaigns')
+                @endif
             </p>
         </div>
         <div class="d-flex flex-wrap gap-3">
@@ -59,18 +71,30 @@
         </div>
     </div>
 
-    <div class="form-group common-style mb-4">
+        <div class="form-group common-style mb-4">
         <div class="create-header mb-4">
             <label class="form--label required mb-0" for="title">@lang('Campaign Title')</label>
-            <p class="campaign-desc">@lang('Write the campaign title so that the influences understand what you really want?')</p>
+            <p class="campaign-desc">
+                @if($isInfluencer)
+                    @lang('Give your proposal a catchy title that summarizes your offer.')
+                @else
+                    @lang('Write the campaign title so that the influences understand what you really want?')
+                @endif
+            </p>
         </div>
         <input class="form-control form--control" id="title" name="title" type="text" value="{{ old('title', @$campaign->title) }}" required>
     </div>
 
-    <div class="form-group common-style mb-4">
+        <div class="form-group common-style mb-4">
         <div class="create-header mb-4">
             <label class="form--label mb-0">@lang('Platform') <span class="text--danger">*</span></label>
-            <p class="campaign-desc">@lang('Platform means on which platform you want to promote your brand')</p>
+            <p class="campaign-desc">
+                @if($isInfluencer)
+                    @lang('Select the platforms where you will promote the brand.')
+                @else
+                    @lang('Platform means on which platform you want to promote your brand')
+                @endif
+            </p>
         </div>
         <div class="flex-wrap gap-3">
             @foreach ($allPlatform as $platform)
@@ -90,10 +114,16 @@
 
     </div>
 
-    <div class="form-group common-style mb-4">
+        <div class="form-group common-style mb-4">
         <div class="create-header mb-4">
             <label class="form--label mb-0"> @lang('What are you promoting?') <span class="text--danger">*</span></label>
-            <p class="campaign-desc">@lang('Select the product type for the campaign')</p>
+            <p class="campaign-desc">
+                @if($isInfluencer)
+                    @lang('Select the type of product you are offering to promote.')
+                @else
+                    @lang('Select the product type for the campaign')
+                @endif
+            </p>
         </div>
         <div class="d-flex flex-wrap gap-3">
             <div class="custom--check">
@@ -117,10 +147,19 @@
         </div>
     </div>
 
-    <div class="form-group common-style mb-4">
+        <div class="form-group common-style mb-4">
         <div class="create-header mb-4">
-            <label class="form--label mb-0"> @lang('Will you be sending product to the influencer?') <span class="text--danger">*</span></label>
-            <p class="campaign-desc">@lang('If you want to promote products with content you create, you can give content to influencer')</p>
+            <label class="form--label mb-0"> 
+                {{ $isInfluencer ? __('Are you requesting a product from the brand?') : __('Will you be sending product to the influencer?') }}
+                <span class="text--danger">*</span>
+            </label>
+            <p class="campaign-desc">
+                @if($isInfluencer)
+                    @lang('Specify if you need the physical/digital product to create your content.')
+                @else
+                    @lang('If you want to promote products with content you create, you can give content to influencer')
+                @endif
+            </p>
         </div>
         <div class="d-flex flex-wrap gap-3">
             <div class="custom--check">
@@ -145,11 +184,17 @@
         </div>
     </div>
 
-    <div class="form-group common-style monetary-value @if (@$campaign->send_product != 'yes') d-none @endif">
+        <div class="form-group common-style monetary-value @if (@$campaign->send_product != 'yes') d-none @endif">
         <div class="row gy-2 align-items-center">
             <div class="col-md-12">
-                <label class="form--label">@lang('Sending Product Value')</label>
-                <p class="campaign-desc">@lang('If you want to send a product to the influencer, give the product price')</p>
+                <label class="form--label">{{ $isInfluencer ? __('Estimated Product Value') : __('Sending Product Value') }}</label>
+                <p class="campaign-desc">
+                    @if($isInfluencer)
+                        @lang('What is the approximate value of the product you are requesting?')
+                    @else
+                        @lang('If you want to send a product to the influencer, give the product price')
+                    @endif
+                </p>
                 <div class="input-group mt-2">
                     <input class="form-control form--control" name="monetary_value" type="number" step="any" value="{{ old('monetary_value', getAmount(@$campaign->monetary_value)) }}">
                     <span class="input-group-text">{{ __(gs('cur_text')) }}</span>
@@ -159,6 +204,7 @@
         </div>
     </div>
 
+            @if(!$isInfluencer)
     <div class="form-group common-style mb-4">
         <div class="create-header mb-4">
             <label class="form--label mb-0"> @lang('Who will create the content?') <span class="text--danger">*</span></label>
@@ -189,12 +235,21 @@
 
         </div>
     </div>
+    @else
+        <input type="hidden" name="content_creator" value="influencer">
+    @endif
 
     <div class="form-group common-style yourself-content d-none @if (@$campaign->content_creator != 'yourself') d-none @endif mb-4"">
         <div class="row gy-2 align-items-center">
             <div class="col-12">
                 <label class="form--label mb-0">@lang('Upload Content')</label>
-                <p class="campaign-desc">@lang('if you provide the content then upload it. obviously, the content type will be .pdf, .doc, .docx, .txt, .jpg, .jpeg, .png, .zip')</p>
+                <p class="campaign-desc">
+                    @if($isInfluencer)
+                        @lang('If the brand is providing the content, you can upload examples or placeholders here.')
+                    @else
+                        @lang('if you provide the content then upload it. obviously, the content type will be .pdf, .doc, .docx, .txt, .jpg, .jpeg, .png, .zip')
+                    @endif
+                </p>
                 <div class="mt-3">
                     <input class="form--control" name="content" type="file" accept="png,.jpg,.jpeg,.pdf,.doc,.docx,.txt,.zip">
                 </div>
@@ -202,6 +257,7 @@
         </div>
     </div>
 
+    @if(!$isInfluencer)
     <div class="form-group common-style mb-4">
         <div class="create-header mb-4">
             <label class="form--label mb-0">@lang('Campaign Thumbnail')</label>
@@ -211,6 +267,7 @@
             <x-image-uploader class="w-100" type="campaign" image="{{ @$campaign->image }}" labelBg="bg--base text-white" :required=false />
         </div>
     </div>
+    @endif
     <div class="text-end">
         <button class="btn btn--base" type="submit"><i class="las la-arrow-right"></i> @lang('Next')</button>
     </div>

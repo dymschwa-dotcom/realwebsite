@@ -14,7 +14,7 @@
                             <a href="{{ route('influencer.conversation.view', $conv->id) }}" 
                                class="d-flex align-items-center p-3 border-bottom decoration-none chat-item {{ $conversation->id == $conv->id ? 'bg-selected' : '' }}">
                                 <div class="avatar-wrapper">
-                                    <img src="{{ getImage(getFilePath('userProfile') . '/' . $conv->user->image, getFileSize('userProfile')) }}" 
+                                    <img src="{{ getImage(getFilePath('brand') . '/' . $conv->user->image, getFileSize('brand')) }}" 
                                          class="rounded-circle border" style="width: 45px; height: 45px; object-fit: cover;">
                                 </div>
                                 <div class="ms-3 overflow-hidden">
@@ -34,7 +34,7 @@
                         <a href="{{ route('influencer.conversation.index') }}" class="btn btn-sm btn-light d-lg-none me-2">
                             <i class="las la-angle-left"></i>
                         </a>
-                        <img src="{{ getImage(getFilePath('userProfile') . '/' . $conversation->user->image, getFileSize('userProfile')) }}" 
+                        <img src="{{ getImage(getFilePath('brand') . '/' . $conversation->user->image, getFileSize('brand')) }}" 
                              class="rounded-circle border" style="width: 40px; height: 40px; object-fit: cover;">
                         <div class="ms-3">
                             <h6 class="m-0 fw-bold">{{ __($conversation->user->fullname) }}</h6>
@@ -42,9 +42,9 @@
                         </div>
                     </div>
                     
-                    <button type="button" class="btn btn-sm btn--primary px-3" data-bs-toggle="modal" data-bs-target="#inviteCampaignModal">
-                        <i class="las la-file-invoice-dollar"></i> @lang('Send Custom Package')
-                    </button>
+                    <a href="{{ route('influencer.campaign.create.wizard') }}?conversation_id={{ $conversation->id }}" class="btn btn-sm btn--primary px-3">
+                        <i class="las la-file-invoice-dollar"></i> @lang('Send Custom Brief')
+                    </a>
                 </div>
 
                 {{-- Messages Area --}}
@@ -117,51 +117,7 @@
     </div>
 </div>
 
-{{-- MODAL 2: Custom Package Modal --}}
-<div class="modal fade" id="inviteCampaignModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <form id="proposal-form" action="{{ route('influencer.campaign.proposal.final.submit') }}" method="POST">
-            @csrf
-            <div class="modal-content">
-                <div class="modal-header border-0 bg-light">
-                    <h5 class="modal-title">@lang('Send Custom Package Proposal')</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
 
-                <div class="modal-body">
-                    {{-- Pull the raw number value from the conversation row --}}
-                    <input type="hidden" name="campaign_id" value="{{ $conversation->campaign_id }}">
-                    <input type="hidden" name="conversation_id" value="{{ $conversation->id }}">
-
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold">@lang('Package Title')</label>
-                        {{-- Use the @ sign to suppress errors if campaign is null --}}
-                        <input type="text" name="title" class="form-control" 
-                               value="{{ @$conversation->campaign->title ? 'Proposal: ' . $conversation->campaign->title : 'Custom Proposal' }}" required>
-                    </div>
-
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-bold">@lang('Proposal Details')</label>
-                        <textarea name="message" class="form-control" rows="4" required placeholder="@lang('Describe your plan...')"></textarea>
-                    </div>
-
-                    <div class="form-group mb-0">
-                        <label class="form-label fw-bold">@lang('Proposed Price') ($)</label>
-                        <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <input type="number" step="0.01" name="budget" class="form-control" 
-                                   value="{{ @$conversation->campaign->budget ?? '' }}" placeholder="0.00" required>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@lang('Cancel')</button>
-                    <button type="submit" class="btn btn--primary px-4">@lang('Send Proposal')</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
 @endsection
 
 @push('script')

@@ -29,7 +29,7 @@ class CampaignController extends Controller {
     public function all(Request $request) {
         $pageTitle  = 'All Campaign';
         $platforms  = Platform::active()->orderBy('name')->get();
-        $campaigns  = Campaign::onGoing()->general();
+        $campaigns  = Campaign::onGoing()->general()->where('is_private', 0); // EXCLUDE PRIVATE
         $campaigns  = $this->getFilterCampaign($campaigns, $platforms);
         
         $campaigns  = $campaigns->searchable(['title'])
@@ -95,162 +95,165 @@ class CampaignController extends Controller {
 
     /**
      * Send Message / Work Submission
-     * FIXED: Returns keys 'message_html' and 'last_id' to match your Blade JS
      */
     public function sendMessage(Request $request) {
         $request->validate([
             'conversation_id' => 'required|integer',
-            'campaign_id'     => 'required|integer',
+            'campaign_id'     => 'nullable|integer',
             'message'         => 'nullable|string',
             'attachment'      => 'nullable|file|max:51200', 
         ]);
 
         $isInfluencer = auth()->guard('influencer')->check();
         $authId       = $isInfluencer ? auth()->guard('influencer')->id() : auth()->id();
-        $authType     = $isInfluencer ? 'influencer' : 'user';
 
-        $message = new Message();
-        $message->conversation_id = $request->conversation_id;
-        $message->campaign_id     = $request->campaign_id;
-        $message->sender_id       = $authId;
-        $message->sender_type     = $authType;
-        $message->message         = $request->message ?? 'Deliverable Uploaded';
-        $message->type            = $request->hasFile('attachment') ? 'work_submission' : 'text';
+        try {
+            $conversation = Conversation::findOrFail($request->conversation_id);
 
-        if ($request->hasFile('attachment')) {
-            try {
-                $file = $request->file('attachment');
-                $path = public_path('assets/support/ticket');
-                $filename = uniqid() . '_' . time() . '.' . $file->getClientOriginalExtension();
-                $file->move($path, $filename);
-                
-                $message->attachment = $filename;
-                $message->original_filename = $file->getClientOriginalName();
-            } catch (\Exception $exp) {
-                if ($request->ajax()) {
-                    return response()->json(['status' => 'error', 'message' => 'File upload failed.']);
+            $message                  = new Message();
+            $message->conversation_id = $conversation->id;
+            $message->sender_id       = $authId;
+            $message->sender_type     = $isInfluencer ? 'influencer' : 'user';
+            $message->message         = $request->message;
+
+            if ($request->hasFile('attachment')) {
+                try {
+                    $message->attachments = fileUploader($request->attachment, getFilePath('conversation'));
+                } catch (\Exception $exp) {
+                    return response()->json(['status' => 'error', 'message' => 'Could not upload your attachment']);
                 }
-                return back()->withNotify([['error', 'File System Error: ' . $exp->getMessage()]]);
             }
-        }
 
-        $message->save();
+            $message->save();
 
-        // Update conversation timestamp for sorting in the inbox 
-        Conversation::where('id', $message->conversation_id)->update(['updated_at' => now()]);
+            $conversation->updated_at = now();
+            $conversation->save();
 
-        if ($request->ajax()) {
+            $view = $isInfluencer ? 'influencer.conversation.last_message' : 'user.conversation.last_message';
+            $message_html = view($this->activeTemplate . $view, compact('message'))->render();
+
             return response()->json([
-                'status' => 'success',
-                'message' => 'Message sent successfully',
-                // Updated key name to match your influencer.conversation.view JS 
-                'message_html' => view($this->activeTemplate . 'partials.message_bubble', compact('message'))->render(),
-                'last_id' => $message->id 
+                'status'       => 'success',
+                'message_html' => $message_html,
+                'last_id'      => $message->id
             ]);
-        }
 
-        return back()->withNotify([['success', 'Message sent successfully']]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
+        }
     }
 
     /**
-     * Polling for New Messages
-     * FIXED: Returns 'html' and 'last_id' as required by your setInterval script
+     * View a single conversation
+     */
+    public function viewConversation($id) {
+        $pageTitle = 'View Conversation';
+        $isInfluencer = auth()->guard('influencer')->check();
+        $authId = $isInfluencer ? auth()->guard('influencer')->id() : auth()->id();
+
+        $query = Conversation::where('id', $id);
+        if ($isInfluencer) {
+            $query->where('influencer_id', $authId);
+        } else {
+            $query->where('user_id', $authId);
+        }
+
+        $conversation = $query->with(['messages', 'user', 'influencer'])->firstOrFail();
+
+        // Fetch conversations list for the sidebar
+        $convQuery = Conversation::query();
+        if ($isInfluencer) {
+            $convQuery->where('influencer_id', $authId)->with('user');
+        } else {
+            $convQuery->where('user_id', $authId)->with('influencer');
+        }
+        $conversations = $convQuery->with('lastMessage')->orderBy('updated_at', 'desc')->get();
+
+        // Mark messages as read
+        Message::where('conversation_id', $conversation->id)
+            ->where('sender_type', $isInfluencer ? 'user' : 'influencer')
+            ->update(['is_read' => 1]);
+
+        $view = $isInfluencer ? 'influencer.conversation.view' : 'user.conversation.view';
+        return view($this->activeTemplate . $view, compact('pageTitle', 'conversation', 'conversations'));
+    }
+
+    /**
+     * Download attachment
+     */
+    public function downloadAttachment($file) {
+        $path = getFilePath('conversation');
+        $fullPath = $path . '/' . $file;
+        if (!file_exists($fullPath)) {
+            abort(404);
+        }
+        return response()->download($fullPath);
+    }
+
+    /**
+     * Get new messages for polling
      */
     public function getNewMessages(Request $request, $id) {
         $isInfluencer = auth()->guard('influencer')->check();
         $authId = $isInfluencer ? auth()->guard('influencer')->id() : auth()->id();
-        $lastId = $request->last_id ?? 0;
 
-        // Get messages in this conversation newer than the last displayed ID 
-        $newMessages = Message::where('conversation_id', $id)
+        $lastId = $request->last_id;
+        $messages = Message::where('conversation_id', $id)
             ->where('id', '>', $lastId)
-            ->where('sender_id', '!=', $authId)
-            ->orderBy('id', 'asc')
+            ->where('sender_type', $isInfluencer ? 'user' : 'influencer')
             ->get();
 
         $html = '';
-        $currentLastId = $lastId;
+        $view = $isInfluencer ? 'influencer.conversation.last_message' : 'user.conversation.last_message';
 
-        foreach($newMessages as $msg) {
-            $html .= view($this->activeTemplate . 'partials.message_bubble', ['message' => $msg])->render();
-            $currentLastId = $msg->id;
-        }
-
-        // Mark incoming messages as read upon fetching 
-        if ($newMessages->count() > 0) {
-            Message::whereIn('id', $newMessages->pluck('id'))->update(['is_read' => 1]);
+        foreach ($messages as $message) {
+            $html .= view($this->activeTemplate . $view, compact('message'))->render();
+            $message->is_read = 1;
+            $message->save();
         }
 
         return response()->json([
-            'html' => $html, // Matches data.html in your blade [cite: 3]
-            'last_id' => $currentLastId // Matches data.last_id in your blade [cite: 3]
+            'html'    => $html,
+            'last_id' => $messages->count() > 0 ? $messages->last()->id : $lastId
         ]);
     }
 
     /**
-     * View specific conversation and its messages
-     */
-    public function viewConversation($id) {
-        $pageTitle = "Conversation View";
-        $isInfluencer = auth()->guard('influencer')->check();
-        $authId = $isInfluencer ? auth()->guard('influencer')->id() : auth()->id();
-
-        $conversation = Conversation::where('id', $id)->where(function($q) use ($authId, $isInfluencer) {
-            $isInfluencer ? $q->where('influencer_id', $authId) : $q->where('user_id', $authId);
-        })->firstOrFail();
-
-        // Mark incoming messages as read 
-        Message::where('conversation_id', $id)->where('sender_id', '!=', $authId)->update(['is_read' => 1]);
-
-        $messages = Message::where('conversation_id', $id)->orderBy('created_at', 'asc')->get();
-        $conversations = Conversation::where($isInfluencer ? 'influencer_id' : 'user_id', $authId)
-            ->with($isInfluencer ? 'user' : 'influencer')
-            ->orderBy('updated_at', 'desc')->get();
-
-        $view = $isInfluencer ? 'influencer.conversation.view' : 'user.conversation.view';
-        return view($this->activeTemplate . $view, compact('pageTitle', 'conversation', 'messages', 'conversations'));
-    }
-
-    /**
-     * Update Deliverable Status (Approve/Reject)
+     * Update work status (approve/reject/revision)
      */
     public function updateWorkStatus(Request $request) {
         $request->validate([
             'message_id' => 'required|integer',
-            'status'     => 'required|in:approved,revision_requested',
-            'reason'     => 'nullable|string|max:500'
+            'status'     => 'required|in:approved,revision_requested,rejected'
         ]);
 
         $message = Message::findOrFail($request->message_id);
         $message->status = $request->status;
-        $message->admin_note = ($request->status == 'revision_requested') ? $request->reason : null;
         $message->save();
 
         return response()->json([
-            'status' => 'success', 
-            'message' => $request->status == 'approved' ? 'Deliverable approved!' : 'Revision request sent.'
+            'status' => 'success',
+            'message' => 'Work status updated successfully'
         ]);
     }
 
-    /**
-     * Reusable filter logic
-     */
     protected function getFilterCampaign($campaigns, $platforms) {
+        if (request()->platform) {
+            $campaigns = $campaigns->whereHas('platforms', function ($q) {
+                $q->where('slug', request()->platform);
+            });
+        }
         if (request()->category) {
-            $categoryIds = Category::active()->whereIn('slug', request()->category)->pluck('id')->toArray();
-            $campaigns->whereHas('categories', function ($q) use ($categoryIds) {
-                $q->whereIn('campaign_categories.category_id', $categoryIds);
+            $campaigns = $campaigns->whereHas('categories', function ($q) {
+                $q->where('slug', request()->category);
+            });
+        }
+        if (request()->country) {
+            $campaigns = $campaigns->whereHas('user', function ($q) {
+                $q->where('country_name', request()->country);
             });
         }
         return $campaigns;
     }
-
-    /**
-     * File Download Helper
-     */
-    public function downloadAttachment($filename) {
-        $fullPath = public_path('assets/support/ticket/') . $filename;
-        if (!file_exists($fullPath)) return back()->withNotify([['error', 'File not found.']]);
-        return response()->download($fullPath);
-    }
 }
+

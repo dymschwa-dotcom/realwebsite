@@ -240,38 +240,56 @@
     })(jQuery);
 
     // 4. Global function for Campaign Status
-    function updateCampaignStatus(campaignId, status) {
-        if (!confirm(`@lang('Are you sure?')`)) return;
-        $.post("{{ route('user.campaign.status.update') }}", {
-            _token: "{{ csrf_token() }}",
-            campaign_id: campaignId,
-            status: status
-        }, function(response) {
-            if (response.status == 'success') {
-                notify('success', response.message);
-                location.reload();
+    window.updateCampaignStatus = function(campaignId, status) {
+        if (!confirm("@lang('Are you sure?')")) return;
+        jQuery.ajax({
+            url: "{{ route('user.campaign.status.update') }}",
+            method: "POST",
+            data: {
+                _token: "{{ csrf_token() }}",
+                campaign_id: campaignId,
+                status: status
+            },
+            success: function(response) {
+                if (response.status == 'success') {
+                    notify('success', response.message);
+                    location.reload();
+                } else {
+                    notify('error', response.message);
+                }
             }
         });
-        // 5. Global function for Influencer Proposal (Contract) Status
-function updateProposalStatus(participantId, status) {
-    if (!confirm(`Are you sure you want to ${status} this proposal?`)) return;
+    }
 
-    $.post("{{ route('user.campaign.proposal.update') }}", {
-        _token: "{{ csrf_token() }}",
-        participant_id: participantId,
-        status: status
-    }, function(response) {
-        if (response.status == 'success') {
-            notify('success', response.message);
-            // Refreshing ensures the "Active" badge and status updates correctly
-            setTimeout(() => { location.reload(); }, 1000);
-        } else {
-            notify('error', response.message);
-        }
-    }).fail(function() {
-        notify('error', 'Something went wrong or insufficient balance.');
-    });
-}
+    // 5. Global function for Influencer Proposal (Contract) Status
+    window.updateProposalStatus = function(participantId, status) {
+        if (!confirm(`Are you sure you want to ${status} this proposal?`)) return;
+
+        jQuery.ajax({
+            url: "{{ route('user.campaign.proposal.update') }}",
+            method: "POST",
+            data: {
+                _token: "{{ csrf_token() }}",
+                participant_id: participantId,
+                status: status
+            },
+            success: function(response) {
+                if (response.status == 'success') {
+                    notify('success', response.message);
+                    
+                    if (response.redirect_url) {
+                        setTimeout(() => { window.location.href = response.redirect_url; }, 1000);
+                    } else {
+                        setTimeout(() => { location.reload(); }, 1000);
+                    }
+                } else {
+                    notify('error', response.message);
+                }
+            },
+            error: function() {
+                notify('error', 'Something went wrong or insufficient balance.');
+            }
+        });
     }
 </script>
 @endpush

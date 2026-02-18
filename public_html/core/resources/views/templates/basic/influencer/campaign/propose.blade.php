@@ -50,7 +50,7 @@
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item d-flex justify-content-between">
                         <span class="text-muted">@lang('Budget')</span>
-                        <span class="fw-bold text--success">{{ $general->cur_sym }}{{ showAmount($campaign->budget) }}</span>
+                        <span class="fw-bold text--success">{{ showAmount($campaign->budget) }}</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                         <span class="text-muted">@lang('Deadline')</span>

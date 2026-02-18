@@ -11,8 +11,67 @@
                         <div class="text-muted">@php echo $campaign->description @endphp</div>
                         <hr class="my-4">
                         <h4 class="mb-3 text--danger">@lang('Requirements')</h4>
-                        <div class="p-3 bg-light rounded border border-danger border-opacity-25">
-                            <p class="text-dark fw-bold mb-0" style="white-space: pre-line;">{{ __($campaign->content_requirements) }}</p>
+                        <div class="table-responsive">
+                            <table class="table table--light">
+                                <thead>
+                                    <tr>
+                                        <th>@lang('Platform')</th>
+                                        <th>@lang('Content Types')</th>
+                                        <th>@lang('Placement')</th>
+                                        <th>@lang('Deliverables')</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @php
+                                        $reqs = $campaign->content_requirements;
+                                        if (is_string($reqs)) $reqs = json_decode($reqs);
+                                        $platformIds = $campaign->platforms->pluck('id')->toArray();
+                                    @endphp
+
+                                    @if(in_array(1, $platformIds)) {{-- Facebook --}}
+                                    <tr>
+                                        <td><i class="fab fa-facebook text--facebook fs-4"></i> @lang('Facebook')</td>
+                                        <td>{{ implode(', ', (array)(@$reqs->facebook_type ?? [])) }}</td>
+                                        <td>{{ implode(', ', (array)(@$reqs->facebook_placement ?? [])) }}</td>
+                                        <td>{{ @$reqs->facebook_post_count }} @lang('Posts')</td>
+                                    </tr>
+                                    @endif
+
+                                    @if(in_array(2, $platformIds)) {{-- Instagram --}}
+                                    <tr>
+                                        <td><i class="fab fa-instagram text--instagram fs-4"></i> @lang('Instagram')</td>
+                                        <td>{{ implode(', ', (array)(@$reqs->instagram_type ?? [])) }}</td>
+                                        <td>{{ implode(', ', (array)(@$reqs->instagram_placement ?? [])) }}</td>
+                                        <td>{{ @$reqs->instagram_post_count }} @lang('Posts')</td>
+                                    </tr>
+                                    @endif
+
+                                    @if(in_array(3, $platformIds)) {{-- Youtube --}}
+                                    <tr>
+                                        <td><i class="fab fa-youtube text--youtube fs-4"></i> @lang('Youtube')</td>
+                                        <td>@lang('Video')</td>
+                                        <td>{{ implode(', ', (array)(@$reqs->youtube_placement ?? [])) }}</td>
+                                        <td>{{ @$reqs->youtube_video_count }} @lang('Videos')</td>
+                                    </tr>
+                                    @endif
+                                </tbody>
+                            </table>
+                        </div>
+
+                        @if(@$reqs->video_length)
+                            <p class="mt-2 small text-muted"><strong>@lang('Note'):</strong> @lang('Minimum video length required'): {{ $reqs->video_length }} @lang('minutes').</p>
+                        @endif
+
+                        <hr class="my-4">
+                        <div class="row gy-4">
+                            <div class="col-md-6">
+                                <h6 class="mb-2">@lang('Review Process')</h6>
+                                <p class="text-muted small">{{ __($campaign->review_process) }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="mb-2">@lang('Approval Process')</h6>
+                                <p class="text-muted small">{{ __($campaign->approval_process) }}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -69,10 +128,7 @@
                                 <tbody>
                                     @php 
                                         $files = App\Models\Message::whereNotNull('attachment')
-                                                ->where(function($q) use ($campaign) {
-                                                    $q->where('campaign_id', $campaign->id)
-                                                      ->orWhere('conversation_id', $campaign->conversation_id);
-                                                })
+                                                ->where('campaign_id', $campaign->id)
                                                 ->latest()
                                                 ->get(); 
                                     @endphp
@@ -128,7 +184,18 @@
             <div class="col-lg-4">
                 <div class="card border-0 shadow-sm text-center p-4 sticky-sidebar">
                     <span class="text-muted small fw-bold">@lang('TOTAL BUDGET')</span>
-                    <h2 class="text-success mb-4">{{ $general->cur_sym }}{{ showAmount($campaign->budget) }}</h2>
+                    <h2 class="text-success mb-4">{{ showAmount($campaign->budget) }}</h2>
+                    
+                    <div class="campaign-dates mb-4 text-start bg-light p-3 rounded">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="small text-muted">@lang('Start Date'):</span>
+                            <span class="small fw-bold">{{ showDateTime($campaign->start_date, 'd M, Y') }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="small text-muted">@lang('Deadline'):</span>
+                            <span class="small fw-bold text--danger">{{ showDateTime($campaign->end_date, 'd M, Y') }}</span>
+                        </div>
+                    </div>
                     
                     {{-- 1. Influencer Proposal View --}}
                     @if(auth()->guard('influencer')->check())
@@ -167,9 +234,22 @@
                     {{-- 2. Brand Owner Dashboard View --}}
                     @elseif(isset($isOwner) && $isOwner)
                         @if($campaign->status == 0)
+                            @php
+                                $participant = App\Models\Participant::where('campaign_id', $campaign->id)->first();
+                            @endphp
                             <div class="brand-actions">
-                                <button class="btn btn--success w-100 mb-2 proposalBtn" data-status="approved">@lang('Accept Proposal')</button>
-                                <button class="btn btn--danger w-100 proposalBtn" data-status="rejected">@lang('Decline')</button>
+                                <h6 class="mb-3 text-start">@lang('Proposal Actions')</h6>
+                                <button class="btn btn--success w-100 mb-2 statusBtn" 
+                                        data-id="{{ $participant->id ?? '' }}" 
+                                        data-status="accept">
+                                    <i class="las la-check-circle"></i> @lang('Accept & Fund Proposal')
+                                </button>
+                                <button class="btn btn--danger w-100 statusBtn" 
+                                        data-id="{{ $participant->id ?? '' }}" 
+                                        data-status="reject">
+                                    <i class="las la-times-circle"></i> @lang('Decline')
+                                </button>
+                                <p class="small text-muted mt-3">@lang('By accepting, the proposed budget will be deducted from your balance.')</p>
                             </div>
                         @elseif($campaign->status == 1)
                             <button class="btn btn--primary w-100 completeJobBtn">
@@ -291,6 +371,22 @@
         $('.statusBtn').on('click', function() {
             let id = $(this).data('id');
             let status = $(this).data('status');
+            
+            // Handle Proposal Acceptance/Rejection
+            if(status == 'accept' || status == 'reject'){
+                if(confirm(`Are you sure you want to ${status} this proposal?`)) {
+                    $.post("{{ route('workspace.proposal.update') }}", {
+                        _token: "{{ csrf_token() }}",
+                        participant_id: id,
+                        status: status
+                    }, function(res) {
+                        notify(res.status, res.message);
+                        if(res.status == 'success') location.reload();
+                    });
+                }
+                return;
+            }
+
             if(status == 'approved'){
                 if(confirm("@lang('Approve this work submission?')")) {
                     $.post("{{ route('campaign.file.status') }}", {

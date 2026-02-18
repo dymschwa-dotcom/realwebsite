@@ -43,7 +43,7 @@
                                     @endforeach
                                 </ul>
                                 <div class="campaign__user">
-                                    <span class="fw-bold text--success">{{ $general->cur_sym }}{{ showAmount(@$invite->campaign->budget) }}</span>
+                                    <span class="fw-bold text--success">{{ showAmount(@$invite->campaign->budget) }}</span>
                                 </div>
                             </div>
 

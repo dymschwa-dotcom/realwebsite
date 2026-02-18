@@ -39,7 +39,7 @@ class CampaignController extends Controller {
             ->exists();
 
         if ($alreadyApplied) {
-            $notify[] = ['error', 'You have already submitted a proposal for this campaign.'];
+            $notify[] = ['error', 'You have already submitted a proposal for this campaign.';
             return back()->withNotify($notify);
         }
 
@@ -239,4 +239,17 @@ class CampaignController extends Controller {
         'last_id'      => $message->id
     ]);
 }
+
+    public function previous($step, $slug = null) {
+        $step = (int) $step;
+        $step--;
+
+        if ($step < 0) {
+            $step = 0;
+        }
+
+        // Specific logic for INFLUENCER "previous" action
+        return redirect()->route('influencer.campaign.create.wizard', ['step' => $step, 'slug' => $slug]);
+    }
 }
+

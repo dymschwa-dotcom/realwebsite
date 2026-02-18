@@ -96,10 +96,8 @@ class LoginController extends Controller
     public function logout()
     {
         $this->guard()->logout();
-        request()->session()->invalidate();
-
         $notify[] = ['success', 'You have been logged out.'];
-        return to_route('user.login')->withNotify($notify);
+        return to_route('login')->withNotify($notify);
     }
 
 
@@ -116,11 +114,11 @@ class LoginController extends Controller
             $userLogin->country =  $exist->country;
         }else{
             $info = json_decode(json_encode(getIpInfo()), true);
-            $userLogin->longitude =  @implode(',',$info['long']);
-            $userLogin->latitude =  @implode(',',$info['lat']);
-            $userLogin->city =  @implode(',',$info['city']);
-            $userLogin->country_code = @implode(',',$info['code']);
-            $userLogin->country =  @implode(',', $info['country']);
+            $userLogin->longitude =  @implode(',',$info["long"]);
+            $userLogin->latitude =  @implode(',',$info["lat"]);
+            $userLogin->city =  @implode(',',$info["city"]);
+            $userLogin->country_code = @implode(',',$info["code"]);
+            $userLogin->country =  @implode(',',$info["country"]);
         }
 
         $userAgent = osBrowser();
@@ -137,3 +135,4 @@ class LoginController extends Controller
 
 
 }
+
