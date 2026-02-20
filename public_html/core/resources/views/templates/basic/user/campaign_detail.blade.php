@@ -234,18 +234,11 @@
                             </div>
                         </div>
                     </div>
-                                        <div class="card custom--card mt-4">
+                    <div class="card custom--card mt-4">
                         <div class="card-body">
                             <div class="campaign__task-sidebar">
-                                <h5 class="title">@lang('Campaign Schedule')</h5>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="small text-muted">@lang('Start Date'):</span>
-                                    <span class="small fw-bold">{{ showDateTime($campaign->start_date, 'd M, Y') }}</span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span class="small text-muted">@lang('Deadline'):</span>
-                                    <span class="small fw-bold">{{ showDateTime($campaign->end_date, 'd M, Y') }}</span>
-                                </div>
+                                <h5 class="title">@lang('Last Date Of Participation')</h5>
+                                <span>{{ $campaign->end_date }}</span>
                             </div>
                         </div>
                     </div>

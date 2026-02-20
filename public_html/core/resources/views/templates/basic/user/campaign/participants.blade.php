@@ -4,7 +4,9 @@
         <div class="dashboard-hiring__menu">
             <select class="form--control select2" data-minimum-results-for-search="-1" name="status">
                 <option value="all">@lang('All')</option>
-                <option value="pending" @selected(request()->status == 'pending')>@lang('Pending')</option>
+                <option value="inquiry" @selected(request()->status == 'inquiry')>@lang('Inquiry')</option>
+                <option value="proposal" @selected(request()->status == 'proposal')>@lang('Proposal')</option>
+                <option value="pending" @selected(request()->status == 'pending')>@lang('Pending')</option>         
                 <option value="accepted" @selected(request()->status == 'accepted')>@lang('Accepted')</option>
                 <option value="delivered" @selected(request()->status == 'delivered')>@lang('Delivered')</option>
                 <option value="completed" @selected(request()->status == 'completed')>@lang('Completed')</option>
@@ -15,13 +17,13 @@
             </select>
         </div>
         <div class="dashbaord-table-header-right d-flex flex-wrap gap-3">
-
             <form class="search-form">
                 <input class="form--control" name="search" type="search" value="{{ request()->search }}" placeholder="@lang('Search..')">
                 <button class="search-form__btn" type="submit"><i class="fas fa-search"></i></button>
             </form>
         </div>
     </div>
+
     <div class="row gy-4">
         <div class="dashboard-table">
             <table class="table--responsive--xxl table">
@@ -38,10 +40,17 @@
                     @forelse($participants as $participant)
                         <tr>
                             <td><span>{{ $participant->participant_number }}</span></td>
-                            <td>
-                                <a class="text--base" href="{{ route('influencer.profile', @$participant->influencer->username) }}" target="_blank">
-                                    <span class="fw-bold"><span>@</span>{{ @$participant->influencer->username }}</span>
-                                </a>
+                                                        <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <img src="{{ getImage(getFilePath('influencer') . '/' . $participant->influencer->image, getFileSize('influencer')) }}"
+                                        alt="@lang('image')" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                                    <div>
+                                        <span class="d-block fw-bold">{{ $participant->influencer->fullname }}</span>
+                                        <a href="{{ route('influencer.profile', @$participant->influencer->username) }}" target="_blank" class="small text--base">
+                                            @ {{ $participant->influencer->username }}
+                                        </a>
+                                    </div>
+                                </div>
                             </td>
                             <td>
                                 @if (@$participant->budget > 0)
@@ -51,16 +60,14 @@
                                 @endif
                             </td>
                             <td>
-                                @php
-                                    echo $participant->statusBadge;
-                                @endphp
+                                @php echo $participant->statusBadge; @endphp
                             </td>
                             <td>
                                 <div class="dropdown table-action">
-                                    <span id="dropdownMenuLink" data-bs-toggle="dropdown" role="button" aria-expanded="false">
+                                    <span id="dropdownMenuLink{{ $participant->id }}" data-bs-toggle="dropdown" role="button" aria-expanded="false">
                                         <i class="las la-ellipsis-v"></i>
                                     </span>
-                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink{{ $participant->id }}">
                                         @if ($participant->status == Status::PARTICIPATE_REQUEST_PENDING)
                                             <li>
                                                 <button class="dropdown-item confirmationBtn" data-action="{{ route('user.participant.accept', $participant->id) }}" data-question="@lang('Are you sure to accept this participant in your campaign')?" type="button">
@@ -71,6 +78,12 @@
                                                 <button class="dropdown-item confirmationBtn" data-action="{{ route('user.participant.reject', $participant->id) }}" data-question="@lang('Are you sure to reject this participant in your campaign')?" type="button">
                                                     <i class="las la-times-circle"></i> @lang('Reject')
                                                 </button>
+                                            </li>
+                                        @elseif($participant->status == Status::PARTICIPATE_INQUIRY || $participant->status == Status::PARTICIPATE_PROPOSAL)
+                                            <li>
+                                                <a class="dropdown-item" href="{{ route('user.participant.conversation.inbox', $participant->id) }}">
+                                                    <i class="las la-sms"></i> @lang('Chat')
+                                                </a>
                                             </li>
                                         @else
                                             <li>
@@ -99,7 +112,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class=" text-center not-found" colspan="100%">
+                            <td class="text-center not-found" colspan="100%">
                                 <div>
                                     <i class="la la-2x la-frown"></i>
                                     <br>
@@ -112,6 +125,7 @@
             </table>
         </div>
     </div>
+
     @if ($participants->hasPages())
         <div class="mt-4">
             {{ paginateLinks($participants) }}
@@ -132,7 +146,6 @@
             $('.select2').each(function(index, element) {
                 $(element).select2();
             });
-
         })(jQuery)
     </script>
 @endpush

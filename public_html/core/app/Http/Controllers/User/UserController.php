@@ -2,238 +2,241 @@
 
 namespace App\Http\Controllers\User;
 
-use App\Http\Controllers\Controller;
-use App\Models\Conversation;
-use App\Models\Message;
-use App\Models\Influencer;
-use App\Models\Campaign;
-use App\Models\Participant;
 use App\Constants\Status;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
+use App\Http\Controllers\Controller;
+use App\Lib\FormProcessor;
+use App\Lib\ReferralCommission;
+use App\Models\Activity;
+use App\Models\Campaign;
+use App\Models\DeviceToken;
+use App\Models\Form;
+use App\Models\Participant;
 use App\Models\Transaction;
+use App\Rules\FileTypeValidate;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
-class UserController extends Controller
-{
-    protected $activeTemplate;
-
-    public function __construct()
-    {
-        $this->activeTemplate = activeTemplate();
-    }
-
-    /**
-     * Brand Dashboard
-     */
-     
-     public function index()
-{
-    $pageTitle = 'Dashboard';
-    $user = auth()->user();
-
-    // ADD THIS LINE HERE TOO
-    $allCount = \App\Models\Campaign::where('user_id', $user->id)->count();
-
-    // AND ADD IT TO COMPACT HERE
-    return view($this->activeTemplate . 'user.dashboard', compact('pageTitle', 'allCount'));
-}
-    public function home()
-    {
+class UserController extends Controller {
+    public function home() {
         $pageTitle = 'Dashboard';
-        $user = auth()->user();
 
-        // 1. Financial Stats
-        $data['total_spending']       = $user->deposits()->where('status', Status::PAYMENT_SUCCESS)->sum('amount');
-        
-        // 2. Campaign Stats
-        $data['total_campaigns'] = \App\Models\Campaign::where('user_id', $user->id)->count();
-        $data['active_campaigns']     = Campaign::where('user_id', $user->id)->where('status', Status::CAMPAIGN_APPROVED)->count();
-        $data['pending_campaign']     = Campaign::where('user_id', $user->id)->where('status', Status::CAMPAIGN_PENDING)->count();
-        $data['rejected_campaign']    = Campaign::where('user_id', $user->id)->where('status', Status::CAMPAIGN_REJECTED)->count();
-        $data['incompleted_campaign'] = Campaign::where('user_id', $user->id)->where('status', Status::CAMPAIGN_INCOMPLETE)->count();
+        $user                         = auth()->user();
+        $data['campaign']             = Campaign::where('user_id', $user->id)->count();
+        $data['running_campaign']     = Campaign::where('user_id', $user->id)->approved()->running()->count();
+        $data['pending_campaign']     = Campaign::where('user_id', $user->id)->pending()->count();
+        $data['rejected_campaign']    = Campaign::where('user_id', $user->id)->rejected()->count();
+        $data['incompleted_campaign'] = Campaign::where('user_id', $user->id)->inCompleted()->count();
 
-        $data['running_campaign']     = Campaign::where('user_id', $user->id)
-                                        ->where('status', Status::CAMPAIGN_APPROVED)
-                                        ->where('end_date', '>', now())
-                                        ->count();
-        
-        // 3. Interaction Stats
-        $data['total_messages']       = Conversation::where('user_id', $user->id)->count();
-        $data['total_participant']    = Participant::whereHas('campaign', function ($q) use ($user) {
-            $q->where('user_id', $user->id);
-        })->count();
+        // 1. Fetch General Campaigns (The "Casting Calls")
+        $generalCampaigns = Campaign::where('user_id', $user->id)
+        ->where('campaign_type', 'general')
+        ->whereIn('status', [Status::CAMPAIGN_APPROVED, Status::CAMPAIGN_COMPLETED]) // Filter active/relevant
+        ->withCount(['participants as pending_count' => function($q) {
+             $q->where('status', Status::PARTICIPATE_REQUEST_PENDING);
+        }])
+        ->withCount(['participants as hired_count' => function($q) {
+             $q->where('status', Status::PARTICIPATE_REQUEST_ACCEPTED);
+        }])
+        ->latest()
+        ->get();
 
-        // 4. Recent Campaigns List
-        $data['campaign'] = Campaign::where('user_id', $user->id)
-            ->orderBy('id', 'desc')
-            ->take(5)
-            ->get();
+        // 2. Fetch Shadow/Direct Campaigns (The "1-on-1s")
+        // We strictly look for active participation records here
+        $directWorkstreams = \App\Models\Participant::whereHas('campaign', function($q) use ($user) {
+                $q->where('user_id', $user->id)
+                ->where('campaign_type', 'invite'); // Shadow campaigns
+            })
+            ->whereNotIn('status', [Status::PARTICIPATE_REQUEST_REJECTED]) // Exclude dead ends
+            ->with(['influencer', 'campaign'])
+            ->get()
+            ->groupBy('influencer_id'); 
+            // ^ This GroupBy is the magic. It turns 10 rows into 3 Influencer Relationships.
 
-        // 5. FIXED: Fetch Activity/Transaction Logs
-        $activities = $user->deposits()->with('gateway')->orderBy('id', 'desc')->take(10)->get();
+        $totalParticipant = Participant::completed()->whereHas('campaign', function ($q) {
+            $q->where('user_id', auth()->id());
+        });
 
-        return view($this->activeTemplate . 'user.dashboard', compact('pageTitle', 'user', 'data', 'activities'));
+        $participantCopy = clone $totalParticipant;
+
+        $data['total_spending']    = $participantCopy->sum('budget');
+        $data['total_participant'] = $participantCopy->count();
+
+        $activities = Activity::where('user_id', $user->id)->latest()->take(5)->get();
+
+        return view('Template::user.dashboard', compact('pageTitle', 'data', 'activities', 'generalCampaigns', 'directWorkstreams'));
     }
 
-    // ... (rest of the controller methods remain the same)
-    
-    public function startConversation($id)
-    {
-        $user = auth()->user();
-        $influencer = Influencer::findOrFail($id);
-        $conversation = Conversation::where('user_id', $user->id)->where('influencer_id', $influencer->id)->first();
+    public function depositHistory(Request $request) {
+        $pageTitle = 'Deposit History';
+        $deposits  = auth()->user()->deposits()->searchable(['trx'])->with(['gateway'])->orderBy('id', 'desc')->paginate(getPaginate());
+        return view('Template::user.deposit_history', compact('pageTitle', 'deposits'));
+    }
 
-        if (!$conversation) {
-            $conversation = new Conversation();
-            $conversation->user_id = $user->id;
-            $conversation->influencer_id = $influencer->id;
-            $conversation->save();
+    public function transactions() {
+        $pageTitle = 'Transactions';
+        $remarks   = Transaction::distinct('remark')->orderBy('remark')->get('remark');
 
-            $message = new Message();
-            $message->conversation_id = $conversation->id;
-            $message->sender_id       = $user->id;
-            $message->sender_type     = 'user';
-            $message->message         = "Hi " . $influencer->firstname . ", I'm interested in working with you!";
-            $message->type            = 'text';
-            $message->is_read         = Status::NO;
-            $message->save();
+        $transactions = Transaction::where('user_id', auth()->id())->searchable(['trx'])->filter(['trx_type', 'remark'])->orderBy('id', 'desc')->paginate(getPaginate());
+
+        return view('Template::user.transactions', compact('pageTitle', 'transactions', 'remarks'));
+    }
+
+    public function kycForm() {
+        if (auth()->user()->kv == Status::KYC_PENDING) {
+            $notify[] = ['error', 'Your KYC is under review'];
+            return to_route('user.home')->withNotify($notify);
         }
-        return redirect()->route('user.conversation.view', $conversation->id);
-    }
-
-    public function conversationIndex()
-    {
-        $pageTitle = 'Messages';
-        $user = auth()->user();
-        $conversations = Conversation::where('user_id', $user->id)->with(['influencer', 'lastMessage'])->orderBy('updated_at', 'desc')->paginate(getPaginate());
-        return view($this->activeTemplate . 'user.conversation.index', compact('pageTitle', 'conversations'));
-    }
-
-    public function viewConversation($id)
-{
-    $pageTitle = "Conversation View";
-    $user = auth()->user();
-    
-    // The "with" part is the magic fix. It loads the participant link.
-    $conversation = Conversation::where('user_id', $user->id)
-        ->with(['messages.participant', 'influencer']) 
-        ->findOrFail($id);
-
-    $messages = $conversation->messages;
-    
-    // Mark messages as read while we are here
-    $conversation->messages()->where('sender_type', 'influencer')->update(['is_read' => 1]);
-
-    return view($this->activeTemplate . 'user.conversation.view', compact('pageTitle', 'conversation', 'messages'));
-}
-
-    public function sendMessage(Request $request)
-    {
-        $request->validate(['conversation_id' => 'required|exists:conversations,id', 'message' => 'required|string']);
-        $user = auth()->user();
-        $conversation = Conversation::where('user_id', $user->id)->findOrFail($request->conversation_id);
-        $message = new Message();
-        $message->conversation_id = $conversation->id;
-        $message->sender_id       = $user->id;
-        $message->sender_type     = 'user';
-        $message->message         = $request->message;
-        $message->type            = 'text';
-        $message->is_read         = Status::NO;
-        $message->save();
-        $conversation->touch();
-        if ($request->ajax()) {
-            return response()->json(['status' => 'success', 'message_html' => view('templates.basic.partials.message_bubble', compact('message'))->render(), 'last_id' => $message->id]);
+        if (auth()->user()->kv == Status::KYC_VERIFIED) {
+            $notify[] = ['error', 'You are already KYC verified'];
+            return to_route('user.home')->withNotify($notify);
         }
-        return back()->withNotify([['success', 'Message sent successfully']]);
+        $pageTitle = 'KYC Form';
+        $form      = Form::where('act', 'kyc')->first();
+        return view('Template::user.kyc.form', compact('pageTitle', 'form'));
     }
 
-    public function updateWorkStatus(Request $request)
-    {
-        $request->validate(['message_id' => 'required|exists:messages,id', 'status' => 'required|in:approved,revision_requested,rejected']);
-        $userId = auth()->id();
-        $message = Message::whereHas('conversation', function($q) use ($userId) { $q->where('user_id', $userId); })->where('type', 'work_submission')->findOrFail($request->message_id);
-        $message->status = $request->status;
-        $message->save();
-        return response()->json(['status' => 'success', 'new_status' => $request->status, 'message' => 'Work status updated successfully']);
+    public function kycData() {
+        $user      = auth()->user();
+        $pageTitle = 'KYC Data';
+        abort_if($user->kv == Status::VERIFIED, 403);
+        return view('Template::user.kyc.info', compact('pageTitle', 'user'));
     }
 
-    public function downloadAttachment($file)
-    {
-        $path = getFilePath('verify_work');
-        $fullPath = $path . '/' . $file;
-        if (!file_exists($fullPath)) return back()->withNotify([['error', 'File not found.']]);
-        return response()->download($fullPath);
-    }
-
-    public function getNewMessages(Request $request, $id)
-    {
-        $last_id = $request->last_id;
-        $newMessages = Message::where('conversation_id', $id)->where('id', '>', $last_id)->where('sender_type', 'influencer')->get();
-        $html = '';
-        foreach ($newMessages as $message) {
-            $html .= view('templates.basic.partials.message_bubble', compact('message'))->render();
-            $message->is_read = Status::YES;
-            $message->save();
+    public function kycSubmit(Request $request) {
+        $form           = Form::where('act', 'kyc')->firstOrFail();
+        $formData       = $form->form_data;
+        $formProcessor  = new FormProcessor();
+        $validationRule = $formProcessor->valueValidation($formData);
+        $request->validate($validationRule);
+        $user = auth()->user();
+        foreach (@$user->kyc_data ?? [] as $kycData) {
+            if ($kycData->type == 'file') {
+                fileManager()->removeFile(getFilePath('verify') . '/' . $kycData->value);
+            }
         }
-        return response()->json(['html' => $html, 'last_id' => $newMessages->count() > 0 ? $newMessages->last()->id : $last_id]);
-    }
-
-    public function profile()
-    {
-        $pageTitle = 'Profile Setting';
-        $user = auth()->user();
-        return view($this->activeTemplate . 'user.profile_setting', compact('pageTitle', 'user'));
-    }
-
-    public function submitProfile(Request $request)
-    {
-        $request->validate(['firstname' => 'required|string', 'lastname' => 'required|string']);
-        $user = auth()->user();
-        $user->firstname = $request->firstname;
-        $user->lastname = $request->lastname;
+        $userData                   = $formProcessor->processFormData($request, $formData);
+        $user->kyc_data             = $userData;
+        $user->kyc_rejection_reason = null;
+        $user->kv                   = Status::KYC_PENDING;
         $user->save();
-        return back()->withNotify([['success', 'Profile updated successfully']]);
+
+        $notify[] = ['success', 'KYC data submitted successfully'];
+        return to_route('user.home')->withNotify($notify);
     }
 
-    public function changePassword()
-    {
-        $pageTitle = 'Change Password';
-        return view($this->activeTemplate . 'user.password', compact('pageTitle'));
-    }
-
-    public function submitPassword(Request $request)
-    {
-        $request->validate(['current_password' => 'required', 'password' => 'required|confirmed']);
+    public function userData() {
         $user = auth()->user();
-        if (Hash::check($request->current_password, $user->password)) {
-            $user->password = Hash::make($request->password);
-            $user->save();
-            return back()->withNotify([['success', 'Password changed successfully']]);
+
+        if ($user->profile_complete == Status::YES) {
+            return to_route('user.home');
         }
-        return back()->withNotify([['error', 'The current password doesn\'t match!']]);
-    }
-    public function transactions(Request $request)
-{
-    $pageTitle = 'Transactions';
-    $remarks = Transaction::distinct('remark')->orderBy('remark')->get('remark');
-    
-    $transactions = Transaction::where('user_id', auth()->id());
 
-    if ($request->search) {
-        $transactions = $transactions->where('trx', $request->search);
+        $pageTitle  = 'User Data';
+        $info       = json_decode(json_encode(getIpInfo()), true);
+        $mobileCode = @implode(',', $info['code']);
+        $countries  = json_decode(file_get_contents(resource_path('views/partials/country.json')));
+
+        return view('Template::user.user_data', compact('pageTitle', 'user', 'countries', 'mobileCode'));
     }
 
-    if ($request->type) {
-        $type = $request->type == 'plus' ? '+' : '-';
-        $transactions = $transactions->where('trx_type', $type);
+    public function userDataSubmit(Request $request) {
+
+        $user = auth()->user();
+
+        if ($user->profile_complete == Status::YES) {
+            return to_route('user.home');
+        }
+
+        $countryData  = (array) json_decode(file_get_contents(resource_path('views/partials/country.json')));
+        $countryCodes = implode(',', array_keys($countryData));
+        $mobileCodes  = implode(',', array_column($countryData, 'dial_code'));
+        $countries    = implode(',', array_column($countryData, 'country'));
+
+        $request->validate([
+            'country_code' => 'required|in:' . $countryCodes,
+            'country'      => 'required|in:' . $countries,
+            'mobile_code'  => 'required|in:' . $mobileCodes,
+            'username'     => 'required|unique:users|min:6',
+            'mobile'       => ['required', 'regex:/^([0-9]*)$/', Rule::unique('users')->where('dial_code', $request->mobile_code)],
+            'brand_name'   => 'required|string|max:40',
+            'website'      => 'required|url|max:255',
+            'image'        => ['required', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png'])],
+        ]);
+
+        if (preg_match("/[^a-z0-9_]/", trim($request->username))) {
+            $notify[] = ['info', 'Username can contain only small letters, numbers and underscore.'];
+            $notify[] = ['error', 'No special character, space or capital letters in username.'];
+            return back()->withNotify($notify)->withInput($request->all());
+        }
+
+        $user->country_code = $request->country_code;
+        $user->mobile       = $request->mobile;
+        $user->username     = $request->username;
+        $user->brand_name   = $request->brand_name;
+        $user->website      = $request->website;
+
+        $user->country_name = @$request->country;
+        $user->dial_code    = $request->mobile_code;
+
+        $user->profile_complete = Status::YES;
+
+        if ($request->hasFile('image')) {
+            try {
+                $user->image = fileUploader($request->image, getFilePath('brand'));
+            } catch (\Exception $exp) {
+                $notify[] = ['error', 'Couldn\'t upload your image'];
+                return back()->withNotify($notify);
+            }
+        }
+
+        $user->save();
+        if (gs('brand_register_commission')) {
+            ReferralCommission::brandRegisterCommission($user);
+        }
+        recentActivity('Registration process completed successfully', $user->id);
+        $notify[] = ['success', 'Registration process completed successfully'];
+
+        return to_route('user.home');
     }
 
-    if ($request->remark) {
-        $transactions = $transactions->where('remark', $request->remark);
+    public function addDeviceToken(Request $request) {
+
+        $validator = Validator::make($request->all(), [
+            'token' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return ['success' => false, 'errors' => $validator->errors()->all()];
+        }
+
+        $deviceToken = DeviceToken::where('token', $request->token)->first();
+
+        if ($deviceToken) {
+            return ['success' => true, 'message' => 'Already exists'];
+        }
+
+        $deviceToken          = new DeviceToken();
+        $deviceToken->user_id = auth()->user()->id;
+        $deviceToken->token   = $request->token;
+        $deviceToken->is_app  = Status::NO;
+        $deviceToken->save();
+
+        return ['success' => true, 'message' => 'Token saved successfully'];
     }
 
-    $transactions = $transactions->orderBy('id','desc')->paginate(getPaginate());
-    
-    return view($this->activeTemplate . 'user.transactions', compact('pageTitle', 'transactions', 'remarks'));
-}
+    public function downloadAttachment($fileHash) {
+        $filePath  = decrypt($fileHash);
+        $extension = pathinfo($filePath, PATHINFO_EXTENSION);
+        $title     = slug(gs('site_name')) . '- attachments.' . $extension;
+        try {
+            $mimetype = mime_content_type($filePath);
+        } catch (\Exception $e) {
+            $notify[] = ['error', 'File does not exists'];
+            return back()->withNotify($notify);
+        }
+        header('Content-Disposition: attachment; filename="' . $title);
+        header("Content-Type: " . $mimetype);
+        return readfile($filePath);
+    }
 }

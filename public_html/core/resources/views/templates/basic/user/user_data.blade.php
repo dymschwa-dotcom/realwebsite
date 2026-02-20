@@ -31,6 +31,7 @@
                                             <label class="form-label">@lang('Username')</label>
                                             <input type="text" class="form-control form--control checkUser" name="username" value="{{ old('username') }}" required>
                                             <small class="text--danger usernameExist"></small>
+                                            <small class="text--success usernameAvailable"></small>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
@@ -38,7 +39,7 @@
                                             <label class="form-label">@lang('Country')</label>
                                             <select name="country" class="form-control form--control select2" required>
                                                 @foreach ($countries as $key => $country)
-                                                    <option data-mobile_code="{{ $country->dial_code }}" value="{{ $country->country }}" data-code="{{ $key }}">{{ __($country->country) }}
+                                                    <option data-mobile_code="{{ $country->dial_code }}" value="{{ $country->country }}" data-code="{{ $key }}" @selected($country->country == 'New Zealand')>{{ __($country->country) }}
                                                     </option>
                                                 @endforeach
                                             </select>
@@ -73,25 +74,6 @@
                                             <input class="form--control" name="website" type="text" value="{{ old('website') }}" required>
                                         </div>
                                     </div>
-
-                                    <div class="form-group col-md-6">
-                                        <label class="form-label">@lang('Address')</label>
-                                        <input type="text" class="form-control form--control" name="address" value="{{ old('address') }}">
-                                    </div>
-                                    <div class="form-group col-md-6">
-                                        <label class="form-label">@lang('State')</label>
-                                        <input type="text" class="form-control form--control" name="state" value="{{ old('state') }}">
-                                    </div>
-                                    <div class="form-group col-md-6">
-                                        <label class="form-label">@lang('Zip Code')</label>
-                                        <input type="text" class="form-control form--control" name="zip" value="{{ old('zip') }}">
-                                    </div>
-                                    <div class="form-group col-md-6">
-                                        <label class="form-label">@lang('City')</label>
-                                        <input type="text" class="form-control form--control" name="city" value="{{ old('city') }}">
-                                    </div>
-
-
                                 </div>
                                 <div class="col-sm-12">
                                     <button class="btn btn--base w-100" type="submit">@lang('Submit')</button>
@@ -127,6 +109,8 @@
 
             @if ($mobileCode)
                 $(`option[data-code={{ $mobileCode }}]`).attr('selected', '');
+            @else
+                $(`option[value="New Zealand"]`).attr('selected', '');
             @endif
 
             $('select[name=country]').on('change', function() {
@@ -170,8 +154,12 @@
                 $.post(url, data, function(response) {
                     if (response.data != false) {
                         $(`.${response.type}Exist`).text(`${response.field} already exist`);
+                        $(`.${response.type}Available`).text('');
                     } else {
                         $(`.${response.type}Exist`).text('');
+                        if(name == 'username' && value.length >= 6){
+                            $(`.${response.type}Available`).text(`${response.field} is available`).addClass('text--success').removeClass('text--danger');
+                        }
                     }
                 });
             }

@@ -363,4 +363,39 @@ class AdminController extends Controller {
         return readfile($filePath);
     }
 
+    public function runMigration() {
+        try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ["--force" => true]);
+        return "Migration run successfully: " . \Illuminate\Support\Facades\Artisan::output();
+        } catch (\Exception $e) {
+            // If it fails because of 'users already exists', it means the migrations table is out of sync.
+            // We can try to mark the first few migrations as "done" or just run our specific one.
+            return "Error running migration: " . $e->getMessage();
+    }
 }
+
+    public function runSpecificMigration() {
+        try {
+            $path = 'database/migrations/2024_01_01_000001_add_fields_to_influencer_packages.php';
+            \Illuminate\Support\Facades\Artisan::call('migrate', [
+                "--path" => $path,
+                "--force" => true
+            ]);
+            return "Specific migration run successfully: " . \Illuminate\Support\Facades\Artisan::output();
+        } catch (\Exception $e) {
+            return "Error running specific migration: " . $e->getMessage();
+        }
+    }
+
+    public function forceAddRegionColumn() {
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('influencers', 'region')) {
+            \Illuminate\Support\Facades\Schema::table('influencers', function ($table) {
+                $table->string('region')->nullable()->after('city');
+            });
+            return "Region column added successfully.";
+        }
+        return "Region column already exists.";
+    }
+
+}
+

@@ -94,6 +94,8 @@ class LoginController extends Controller
     public function logout()
     {
         $this->guard('influencer')->logout();
+        request()->session()->invalidate();
+
         $notify[] = ['success', 'You have been logged out.'];
         return to_route('influencer.login')->withNotify($notify);
     }
@@ -139,4 +141,3 @@ class LoginController extends Controller
 
 
 }
-

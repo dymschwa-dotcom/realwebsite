@@ -1,133 +1,121 @@
-@foreach ($influencers as $influencer)
-    <div class="col-xl-3 col-lg-4 col-sm-6 col-xsm-6 mb-4">
-        <div class="collabstr-minimal-card">
-            <a href="{{ route('influencer.profile', slug($influencer->username)) }}" class="d-block">
-                <div class="influencer-image-container">
-                    {{-- FIXED: Removed manual 'thumb_' string. getImage handles the pathing correctly using the filename and size --}}
-                    <img src="{{ getImage(getFilePath('influencer') . '/' . $influencer->image, getFileSize('influencer'), true) }}" class="influencer-img" alt="{{ $influencer->fullname }}">
-
-                    {{-- Favorite Heart (Top Right) --}}
-                    @auth
-                        <span class="favoriteBtn @if(in_array($influencer->id, @$favoriteInfluencer)) active @endif" data-influencer_id="{{ $influencer->id }}">
-                            <i class="las la-heart"></i>
-                        </span>
-                    @endauth
-
-                    {{-- The Bottom Overlay (Icons, Name, City) --}}
-                    <div class="influencer-overlay">
-                        {{-- Social Platform Icons --}}
-                        <div class="overlay-platforms">
-                            @foreach ($influencer->socialLinks->take(3) as $social)
-                                <span class="platform-dot">
-                                    @php echo @$social->platform->icon; @endphp
-                                </span>
-                            @endforeach
+@forelse ($influencers as $influencer)
+    <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
+        <div class="influencer-minimal-card mb-4">
+            <div class="influencer-img-container position-relative shadow-sm border">
+                <a href="{{ route('influencer.profile', $influencer->username) }}">
+                    <img src="{{ getImage(getFilePath('influencer') . '/' . $influencer->image, getFileSize('influencer')) }}" 
+                         alt="{{ __($influencer->fullname) }}" 
+                         class="influencer-hero-img">
+                </a>
+                
+                {{-- Top Badges --}}
+                <div class="rating-mini-badge">
+                    <i class="las la-star"></i>
+                    <span>{{ getAmount($influencer->rating) }}</span>
+                </div>
+                
+                <div class="platform-badge-group">
+                    @foreach ($influencer->socialLink->take(2) as $social)
+                        <div class="platform-mini-badge">
+                            @php echo $social->platform->icon @endphp
                         </div>
+                    @endforeach
+                </div>
+            </div>
 
-                        {{-- Name & Location --}}
-                        <h6 class="overlay-name">
-                            {{ $influencer->fullname }}
-                            {{-- VERIFIED WORKFLOW: Display badge if influencer is KYC verified --}}
-                            @if($influencer->kv == 1)
-                                <i class="las la-check-circle text--info" title="@lang('Verified Influencer')"></i>
-                            @endif
-                        </h6>
-                        <p class="overlay-location">{{ $influencer->city }}{{ $influencer->city ? ',' : '' }} {{ __($influencer->country_name) }}</p>
+            {{-- Info Underneath --}}
+            <div class="influencer-info-bottom mt-2 px-1">
+                <div class="d-flex justify-content-between align-items-start w-100">
+                    <div class="overflow-hidden pe-2">
+                        <h6 class="text-dark fw-bold mb-0 text-truncate">{{ $influencer->firstname }}</h6>
+                        <span class="text-muted small text-truncate d-block">
+                            {{ $influencer->categories->first()?->name }}
+                        </span>
+                    </div>
+                    <div class="text-dark fw-bold small whitespace-nowrap">
+                        {{ showAmount($influencer->packages->min('price')) }}
                     </div>
                 </div>
-            </a>
+            </div>
         </div>
     </div>
-@endforeach
+@empty
+    <div class="col-12 text-center py-5">
+        <div class="empty-state">
+            <img src="{{ getImage('assets/images/frontend/empty_data/empty.png') }}" alt="empty" style="width: 100px; opacity: 0.3;">
+            <p class="text-muted mt-3">@lang('No influencers match your current filters.')</p>
+        </div>
+    </div>
+@endforelse
 
-@push('style')
 <style>
-    .collabstr-minimal-card {
-        position: relative;
+    .influencer-minimal-card {
+        background: transparent;
+        border: none;
+    }
+    .influencer-img-container {
+        width: 100%;
+        aspect-ratio: 16 / 10;
         overflow: hidden;
-        border-radius: 12px;
-        line-height: 0;
-    }
-
-    .influencer-image-container {
+        border-radius: 16px !important;
+        background: #fff;
         position: relative;
-        aspect-ratio: 1 / 1.1;
-        width: 100%;
     }
-
-    .influencer-img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+    .influencer-hero-img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
         display: block;
     }
-
-    .favoriteBtn {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 20px;
-        z-index: 5;
-        cursor: pointer;
-        text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    .influencer-minimal-card:hover .influencer-hero-img {
+        transform: scale(1.1);
     }
-    .favoriteBtn.active { color: #ff385c; }
-
-    .influencer-overlay {
+    .rating-mini-badge {
         position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        padding: 15px;
-        z-index: 2;
-        line-height: 1.2;
-        background: linear-gradient(transparent, rgba(0, 0, 0, 0.4));
-    }
-
-    .overlay-platforms {
+        top: 12px;
+        right: 12px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 4px 10px;
+        border-radius: 20px;
         display: flex;
-        gap: 5px;
-        margin-bottom: 5px;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        font-weight: 800;
+        color: #000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 3;
     }
-
-    .platform-dot {
-        background: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(4px);
-        width: 22px;
-        height: 22px;
+    .rating-mini-badge i {
+        color: #ffb400;
+        font-size: 14px;
+    }
+    .platform-badge-group {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        display: flex;
+        gap: 6px;
+        z-index: 3;
+    }
+    .platform-mini-badge {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        width: 28px;
+        height: 28px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
-        font-size: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        font-size: 13px;
+        color: #fff;
+        border: 1px solid rgba(255,255,255,0.3);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
-
-    .overlay-name {
-        color: #ffffff;
-        font-size: 14px;
-        font-weight: 700;
-        margin: 0;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-    }
-
-    .overlay-name i {
-        font-size: 15px;
-        margin-left: 3px;
-        vertical-align: middle;
-    }
-
-    .overlay-location {
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 11px;
-        margin: 0;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-    }
-    
-    .text--info {
-        color: #0dcaf0 !important;
+    .whitespace-nowrap { white-space: nowrap; }
+    .influencer-info-bottom {
+        padding-top: 5px;
     }
 </style>
-@endpush

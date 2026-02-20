@@ -2,19 +2,20 @@
 
 @section('panel')
     @include('Template::partials.header')
-    @include('Template::partials.breadcrumb')
 
     <div class="dashboard py-120 section-bg-two">
-        <div class="container">
+        <div class="container @if(isset($fullWidth)) container-fluid px-lg-5 @endif">
             <div class="row">
+                @if(!isset($fullWidth))
                 <div class="col-xl-4 col-lg-4 pe-xl-4">
-                    @if (auth()->guard('influencer')->check())
-        @include($activeTemplate . 'partials.influencer_sidebar')
-    @else
-        @include($activeTemplate . 'partials.brand_sidebar')
-    @endif
+                    @if (auth()->check())
+                        @include($activeTemplate . 'partials.brand_sidebar')
+                    @else
+                        @include($activeTemplate . 'partials.influencer_sidebar')
+                    @endif
                 </div>
-                <div class="col-xl-8 col-lg-8">
+                @endif
+                <div class="@if(isset($fullWidth)) col-12 @else col-xl-8 col-lg-8 @endif">
                     <div class="dashboard-body">
                         <div class="dashboard-body__bar d-lg-none d-block">
                             <span class="dashboard-body__bar-icon"><i class="las la-bars"></i></span>

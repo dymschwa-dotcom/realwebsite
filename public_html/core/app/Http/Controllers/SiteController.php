@@ -11,26 +11,11 @@ use App\Models\Language;
 use App\Models\Page;
 use App\Models\SupportMessage;
 use App\Models\SupportTicket;
-use App\Models\Influencer; // Added
-use App\Models\Service;    // Added
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
 
 class SiteController extends Controller {
-    
-    // New Method: Handles the Public Profile View
-    public function influencerProfile($username) {
-        $influencer = Influencer::where('username', $username)
-            ->active()
-            ->with(['services', 'categories', 'socialLinks']) 
-            ->firstOrFail();
-
-        $pageTitle = $influencer->fullname . ' - Profile';
-        
-        return view('Template::influencer_profile', compact('influencer', 'pageTitle'));
-    }
-
     public function index() {
         $reference = @$_GET['reference'];
         if ($reference) {

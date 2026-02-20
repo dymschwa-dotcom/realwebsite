@@ -1,166 +1,150 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\User\UserController;
-use App\Http\Controllers\User\ProfileController;
-use App\Http\Controllers\User\FavoriteController;
-use App\Http\Controllers\User\CampaignController;
-use App\Http\Controllers\User\Auth\LoginController;
-use App\Http\Controllers\User\Auth\RegisterController;
-use App\Http\Controllers\User\Auth\ResetPasswordController;
-use App\Http\Controllers\User\Auth\ForgotPasswordController;
-use App\Models\Platform;        
-use Illuminate\Support\Str;     
 
-Route::name('user.')->group(function () {
-    
-    // Guest Routes
-    Route::middleware('guest')->group(function () {
-        Route::controller(LoginController::class)->group(function () {
-            Route::get('login', 'showLoginForm')->name('login');
-            Route::post('login', 'login');
-        });
+/*
+|--------------------------------------------------------------------------
+| User Routes
+|--------------------------------------------------------------------------
+*/
 
-        Route::controller(RegisterController::class)->group(function () {
-            Route::get('register', 'showRegistrationForm')->name('register');
-            Route::post('register', 'register');
-            Route::post('check-user', 'checkUser')->name('checkUser');
-        });
-
-        Route::controller(ForgotPasswordController::class)->prefix('password')->name('password.')->group(function () {
-            Route::get('reset', 'showLinkRequestForm')->name('request');
-            Route::post('email', 'sendResetCodeEmail')->name('email');
-            Route::get('code-verify', 'codeVerify')->name('code.verify');
-            Route::post('verify-code', 'verifyCode')->name('verify.code');
-        });
-
-        Route::controller(ResetPasswordController::class)->group(function () {
-            Route::post('password/reset', 'reset')->name('password.update');
-            Route::get('password/reset/{token}', 'showResetForm')->name('password.reset');
-        });
+Route::namespace('User\Auth')->name('user.')->middleware('guest')->group(function () {
+    Route::controller('LoginController')->group(function () {
+        Route::get('/login', 'showLoginForm')->name('login');
+        Route::post('/login', 'login');
+        Route::get('logout', 'logout')->middleware('auth')->withoutMiddleware('guest')->name('logout');
     });
 
-    // Authenticated Routes
-    Route::middleware('auth')->group(function () {
-        
-        Route::get('logout', [LoginController::class, 'logout'])->name('logout');
+    Route::controller('RegisterController')->group(function () {
+        Route::get('register', 'showRegistrationForm')->name('register');
+        Route::post('register', 'register');
+        Route::post('check-user', 'checkUser')->name('checkUser')->withoutMiddleware('guest');
+    });
 
-        // Onboarding & Subscription
-        Route::get('user-data', [UserController::class, 'userData'])->name('data');
-        Route::post('user-data-submit', [UserController::class, 'userDataSubmit'])->name('data.submit');
-        Route::post('subscribe/now', [UserController::class, 'buySubscription'])->name('subscribe.now');
+    Route::controller('ForgotPasswordController')->prefix('password')->name('password.')->group(function () {
+        Route::get('reset', 'showLinkRequestForm')->name('request');
+        Route::post('email', 'sendResetCodeEmail')->name('email');
+        Route::get('code-verify', 'codeVerify')->name('code.verify');
+        Route::post('verify-code', 'verifyCode')->name('verify.code');
+    });
 
-        Route::get('subscribe-to-activate', function() {
-            $pageTitle = 'Activate Account';
-            return view(activeTemplate() . 'user.subscribe_activate', compact('pageTitle'));
-        })->name('subscribe.activate');
+    Route::controller('ResetPasswordController')->group(function () {
+        Route::post('password/reset', 'reset')->name('password.update');
+        Route::get('password/reset/{token}', 'showResetForm')->name('password.reset');
+    });
+});
 
-        Route::middleware(['check.status', 'registration.complete'])->group(function () {
-            
-            // Profile & Security
-            Route::controller(ProfileController::class)->group(function(){
-                Route::get('profile-setting', 'profile')->name('profile.setting');
-                Route::post('profile-setting', 'submitProfile');
-                Route::get('change-password', 'changePassword')->name('change.password');
-                Route::post('change-password', 'submitPassword');
+Route::middleware('auth')->name('user.')->group(function () {
+    Route::get('user-data', 'User\UserController@userData')->name('data');
+    Route::post('user-data-submit', 'User\UserController@userDataSubmit')->name('data.submit');
+
+    // Authorization
+    Route::middleware('registration.complete')->namespace('User')->controller('AuthorizationController')->group(function () {
+        Route::get('authorization', 'authorizeForm')->name('authorization');
+        Route::get('resend-verify/{type}', 'sendVerifyCode')->name('send.verify.code');
+        Route::post('verify-email', 'emailVerification')->name('verify.email');
+        Route::post('verify-mobile', 'mobileVerification')->name('verify.mobile');
+    });
+
+    Route::middleware(['check.status', 'registration.complete'])->group(function () {
+        Route::namespace('User')->group(function () {
+
+            Route::controller('UserController')->group(function () {
+                Route::get('dashboard', 'home')->name('home');
+                Route::get('download-attachments/{file_hash}', 'downloadAttachment')->name('download.attachment');
+
+                // 2FA
                 Route::get('twofactor', 'show2faForm')->name('twofactor');
                 Route::post('twofactor/enable', 'create2fa')->name('twofactor.enable');
                 Route::post('twofactor/disable', 'disable2fa')->name('twofactor.disable');
+
+                // KYC
+                Route::get('kyc-form', 'kycForm')->name('kyc.form');
+                Route::get('kyc-data', 'kycData')->name('kyc.data');
+                Route::post('kyc-submit', 'kycSubmit')->name('kyc.submit');
+
+                // Report
+                Route::any('deposit/history', 'depositHistory')->name('deposit.history');
+                Route::get('transactions', 'transactions')->name('transactions');
+                Route::post('add-device-token', 'addDeviceToken')->name('add.device.token');
             });
 
-            // PAYWALL - THE PROTECTED AREA
-            Route::middleware(['subscribed'])->group(function () {
-                Route::get('dashboard', [UserController::class, 'home'])->name('home');
-                Route::get('influencers', [UserController::class, 'influencers'])->name('influencer.index');
-                Route::get('hiring-history', [UserController::class, 'hiringHistory'])->name('hiring.history');
-
-                // Campaign Controller Groups
-                Route::controller(CampaignController::class)->group(function () {
-                    
-                    // Reviews
-                    Route::prefix('review')->name('review.')->group(function () {
-                        Route::get('s', 'reviews')->name('index'); 
-                        Route::get('edit/{participant_id}/{id}', 'editReview')->name('form');
-                        Route::post('remove/{id}', 'removeReview')->name('remove');
-                        Route::post('store', 'storeReview')->name('store');
-                    });
-
-                    // Participant Detail
-                    Route::get('participant/details/{id}', 'participantDetail')->name('participant.detail');
-
-                    // FIX: Proposal Update Route (Placed inside CampaignController group)
-                    Route::post('campaign/proposal/update', 'updateProposalStatus')->name('campaign.proposal.update');
-
-                    // Campaign Management
-                    Route::prefix('campaign')->name('campaign.')->group(function () {
-                        Route::get('all', 'index')->name('index');
-                        Route::post('create/basic/{slug?}', 'basic')->name('basic');
-                        Route::post('create/content/{slug}', 'content')->name('content');
-                        Route::post('create/description/{slug}', 'description')->name('description');
-                        Route::post('create/requirement/{slug}', 'requirement')->name('requirement');
-                        Route::post('create/budget/{slug}', 'budget')->name('budget');
-                        Route::get('create/previous/{step}/{slug?}', 'previous')->name('previous');
-                        Route::get('create/{step?}/{slug?}', 'create')->name('create');
-                    });
-
-                    // Dashboard Filters
+            Route::controller('CampaignController')->prefix('campaign')->name('campaign.')->group(function () {
+                Route::middleware('kyc')->group(function () {
+                    Route::get('create/{step?}/{slug?}/{edit?}', 'create')->name('create');
+                    Route::post('basic/{slug?}', 'basic')->name('basic');
+                    Route::post('content/{slug}', 'content')->name('content');
+                    Route::post('description/{slug}', 'description')->name('description');
+                    Route::post('requirement/{slug}', 'requirement')->name('requirement');
+                    Route::post('budget/{slug}', 'budget')->name('budget');
+                    Route::get('previous/{step?}/{slug?}', 'previous')->name('previous');
+                    Route::get('/invite/form/{id}', 'inviteForm')->name('invite.form');
+                    Route::get('get/influencer', 'getInfluencerUsername')->name('influencer.username');
+                    Route::post('send/invite/{id}', 'sendInviteRequest')->name('send.invite');
+                    Route::get('/', 'index')->name('index');
                     Route::get('pending', 'pending')->name('pending');
                     Route::get('approved', 'approved')->name('approved');
                     Route::get('rejected', 'rejected')->name('rejected');
-                    Route::get('in-completed', 'inCompleted')->name('incompleted');
+                    Route::get('incomplete', 'incomplete')->name('incompleted');
+                    Route::get('view/{id}', 'view')->name('view');
+                });
+            });
 
-                    // Standard CRUD
-                    Route::post('store', 'store')->name('store');
-                    Route::get('edit/{id}', 'edit')->name('edit');
-                    Route::post('update/{id}', 'update')->name('update');
-                    Route::get('details/{id}', 'details')->name('details');
-                    Route::get('finished', 'finished')->name('finished');
+            Route::controller('ParticipantController')->prefix('participant')->name('participant.')->group(function () {
+                Route::get('list/{id}', 'list')->name('list');
+                Route::post('accept/{id}', 'accept')->name('accept');
+                Route::post('reject/{id}', 'reject')->name('reject');
+                Route::post('completed/{id}', 'completed')->name('completed');
+                Route::post('reported/{id}', 'reported')->name('reported');
+                Route::get('detail/{id}', 'detail')->name('detail');
+
+                Route::prefix('conversation')->name('conversation.')->group(function () {
+                    Route::get('inbox/{id}', 'inbox')->name('inbox');
+                    Route::any('send-message/{id}', 'sendMessage')->name('send.message');
+                    Route::any('view-message', 'viewMessage')->name('view.message');
+                    Route::post('send-proposal/{id}', 'sendProposal')->name('send.proposal');
+                    Route::post('accept-proposal/{id}', 'acceptProposal')->name('accept.proposal');
                 });
 
-                // Conversation Routes
-                Route::controller(UserController::class)->prefix('conversation')->name('conversation.')->group(function () {
-                    Route::get('start/{id}', 'startConversation')->name('start');
-                    Route::get('view/{id}', 'viewConversation')->name('view');
-                    // Added helper routes for Brand Chat
-                    Route::post('send', 'sendMessage')->name('send');
-                    Route::get('get-new/{id}', 'getNewMessages')->name('getNewMessages');
-                });
+                Route::post('buy-service/{id}', 'buyService')->name('buy.service');
+                Route::get('create-inquiry/{influencerId}', 'createInquiry')->name('create.inquiry');
+                Route::post('hire-inquiry/{id}', 'hireFromInquiry')->name('hire.inquiry');
+            });
 
-                // Favorites
-                Route::controller(FavoriteController::class)->prefix('favorite')->name('favorite.')->group(function () {
-                    Route::get('list', 'favoriteList')->name('list');
-                    Route::post('add', 'addFavorite')->name('add');
-                    Route::post('delete', 'delete')->name('delete'); 
+            Route::controller('ReviewController')->prefix('review')->name('review.')->group(function () {
+                Route::middleware('kyc')->group(function () {
+                    Route::get('index', 'index')->name('index');
+                    Route::get('form/{participantId}/{id?}', 'reviewForm')->name('form');
+                    Route::post('add/{participantId}/{id?}', 'add')->name('add');
                     Route::post('remove/{id}', 'remove')->name('remove');
                 });
             });
 
-            // Financial & Support
-            Route::get('transactions', [UserController::class, 'transactions'])->name('transactions');
-            Route::get('attachment-download/{file_hash}', [UserController::class, 'downloadAttachment'])->name('download.attachment');
-
-            Route::controller('Gateway\PaymentController')->prefix('deposit')->name('deposit.')->group(function(){
-                Route::any('/', 'deposit')->name('index');
-                Route::post('insert', 'depositInsert')->name('insert');
-                Route::get('confirm', 'depositConfirm')->name('confirm');
-                Route::get('manual', 'manualDepositConfirm')->name('manual.confirm');
-                Route::post('manual', 'manualDepositUpdate')->name('manual.update');
+            Route::controller('FavoriteController')->prefix('favorite')->name('favorite.')->group(function () {
+                Route::get('list', 'favoriteList')->name('list');
+                Route::middleware('kyc')->group(function () {
+                    Route::post('add', 'addFavorite')->name('add');
+                    Route::post('delete', 'delete')->name('delete');
+                    Route::post('remove/{id}', 'remove')->name('remove');
+                });
             });
 
-            Route::any('deposit/history', [UserController::class, 'depositHistory'])->name('deposit.history');
-
-            Route::controller('TicketController')->prefix('ticket')->name('ticket.')->group(function () {
-                Route::get('/', 'supportTicket')->name('index');
-                Route::get('new', 'openSupportTicket')->name('open');
-                Route::post('create', 'storeSupportTicket')->name('store');
-                Route::get('view/{ticket}', 'viewTicket')->name('view');
-                Route::post('reply/{ticket}', 'replyTicket')->name('reply');
-                Route::post('close/{ticket}', 'closeTicket')->name('close');
-                Route::get('download/{ticket}', 'ticketDownload')->name('download');
+            // Profile setting
+            Route::controller('ProfileController')->group(function () {
+                Route::get('profile-setting', 'profile')->name('profile.setting');
+                Route::post('profile-setting', 'submitProfile');
+                Route::get('change-password', 'changePassword')->name('change.password');
+                Route::post('change-password', 'submitPassword');
             });
+        });
 
-            Route::get('notifications', [UserController::class, 'notifications'])->name('notifications');
-            Route::get('notification/read/{id}', [UserController::class, 'notificationRead'])->name('notification.read');
+        // Payment
+        Route::prefix('deposit')->name('deposit.')->controller('Gateway\PaymentController')->group(function () {
+            Route::any('/', 'deposit')->name('index');
+            Route::post('insert', 'depositInsert')->name('insert');
+            Route::get('confirm', 'depositConfirm')->name('confirm');
+            Route::get('manual', 'manualDepositConfirm')->name('manual.confirm');
+            Route::post('manual', 'manualDepositUpdate')->name('manual.update');
         });
     });
 });

@@ -1,24 +1,7 @@
 @extends($activeTemplate . 'layouts.master')
 @section('content')
     <div class="card custom--card">
-        <div class="card-header bg--dark d-flex justify-content-between align-items-center">
-            <h5 class="text-white m-0">@lang('Campaign Details')</h5>
-            <div class="d-flex gap-2">
-                @php 
-                    $conversation = App\Models\Conversation::where('campaign_id', $campaign->id)->first();
-                @endphp
-                
-                @if($conversation)
-                    <a href="{{ route('influencer.conversation.view', $conversation->id) }}" class="btn btn--sm btn--info">
-                        <i class="las la-comments"></i> @lang('Go to Workspace')
-                    </a>
-                @endif
-                
-                <a href="{{ route('influencer.campaign.log') }}" class="btn btn--sm btn--light">
-                    <i class="las la-angle-left"></i> @lang('Back to List')
-                </a>
-            </div>
-        </div>
+
         <div class="card-body">
 
             <div class="step-form">
@@ -137,12 +120,13 @@
                                         {{ __(@$type) }} @lang('as') {{ __(@$placement) }}</span>
                                 </li>
                             @endif
+                        
                             @if (in_array(3, $campaign->platformId))
-                                @php
-                                    $placement = implode(', ', @$campaign->content_requirements->youtube_placement);
+                                 @php
+                                    $youtubePlacement = (array) (@$campaign->content_requirements->youtube_placement ?? []);
+                                    $placement = implode(', ', $youtubePlacement);
                                 @endphp
-                                <li
-                                    class="list-group-item d-flex justify-content-between align-items-center flex-wrap px-0">
+                                <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap px-0">
                                     <span class="fw-bold">@lang('Youtube')</span>
                                     <span>@lang('Need') {{ @$campaign->content_requirements->youtube_video_count }}
                                         {{ __(@$type) }} @lang('as') {{ __(@$placement) }}</span>

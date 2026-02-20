@@ -35,10 +35,6 @@ class ProfileController extends Controller
         $user->firstname = $request->firstname;
         $user->lastname = $request->lastname;
 
-        $user->address = $request->address;
-        $user->city = $request->city;
-        $user->state = $request->state;
-        $user->zip = $request->zip;
         $user->brand_name = $request->brand_name;
         $user->website = $request->website;
 

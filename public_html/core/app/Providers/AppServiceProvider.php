@@ -47,42 +47,42 @@ class AppServiceProvider extends ServiceProvider
             }
         }
 
-        // --- GLOBAL VIEW VARIABLES ---
-        $viewShare['general']      = gs(); // This fixes the "Undefined variable $general" error
+
         $viewShare['emptyMessage'] = 'Data not found';
         view()->share($viewShare);
+
 
         view()->composer('admin.partials.sidenav', function ($view) {
             $view->with([
                 'bannedUsersCount'           => User::banned()->count(),
-                'emailUnverifiedUsersCount'  => User::emailUnverified()->count(),
-                'mobileUnverifiedUsersCount' => User::mobileUnverified()->count(),
-                'kycUnverifiedUsersCount'    => User::kycUnverified()->count(),
-                'kycPendingUsersCount'       => User::kycPending()->count(),
+                'emailUnverifiedUsersCount' => User::emailUnverified()->count(),
+                'mobileUnverifiedUsersCount'   => User::mobileUnverified()->count(),
+                'kycUnverifiedUsersCount'   => User::kycUnverified()->count(),
+                'kycPendingUsersCount'   => User::kycPending()->count(),
 
                 'bannedInfluencerCount'           => Influencer::banned()->count(),
-                'emailUnverifiedInfluencerCount'  => Influencer::emailUnverified()->count(),
-                'mobileUnverifiedInfluencerCount' => Influencer::mobileUnverified()->count(),
-                'kycUnverifiedInfluencerCount'    => Influencer::kycUnverified()->count(),
-                'kycPendingInfluencerCount'       => Influencer::kycPending()->count(),
+                'emailUnverifiedInfluencerCount' => Influencer::emailUnverified()->count(),
+                'mobileUnverifiedInfluencerCount'   => Influencer::mobileUnverified()->count(),
+                'kycUnverifiedInfluencerCount'   => Influencer::kycUnverified()->count(),
+                'kycPendingInfluencerCount'   => Influencer::kycPending()->count(),
 
                 'pendingCampaignCount'            => Campaign::pending()->count(),
                 
                 'pendingTicketCount'         => SupportTicket::whereIN('status', [Status::TICKET_OPEN, Status::TICKET_REPLY])->count(),
-                'pendingDepositsCount'       => Deposit::pending()->count(),
-                'pendingWithdrawCount'       => Withdrawal::pending()->count(),
+                'pendingDepositsCount'    => Deposit::pending()->count(),
+                'pendingWithdrawCount'    => Withdrawal::pending()->count(),
 
                 'reportedParticipantCount'        => Participant::reported()->whereHas('campaign', function ($q) {
                     $q->approved();
                 })->count(),
 
-                'updateAvailable'    => version_compare(gs('available_version'), systemDetails()['version'], '>') ? 'v'.gs('available_version') : false,
+                'updateAvailable'    => version_compare(gs('available_version'),systemDetails()['version'],'>') ? 'v'.gs('available_version') : false,
             ]);
         });
 
         view()->composer('admin.partials.topnav', function ($view) {
             $view->with([
-                'adminNotifications'     => AdminNotification::where('is_read', Status::NO)->with('user')->orderBy('id', 'desc')->take(10)->get(),
+                'adminNotifications' => AdminNotification::where('is_read', Status::NO)->with('user')->orderBy('id', 'desc')->take(10)->get(),
                 'adminNotificationCount' => AdminNotification::where('is_read', Status::NO)->count(),
             ]);
         });
@@ -97,6 +97,7 @@ class AppServiceProvider extends ServiceProvider
         if (gs('force_ssl')) {
             \URL::forceScheme('https');
         }
+
 
         Paginator::useBootstrapFive();
     }

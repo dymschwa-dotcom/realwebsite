@@ -17,35 +17,18 @@ class RegistrationStep
     public function handle(Request $request, Closure $next)
     {
         $user = auth()->user();
-
         if (!$user->profile_complete) {
-            
-            // Define routes that are allowed even if the profile is incomplete
-            $allowedRoutes = [
-                'user.data',
-                'user.data.submit',
-                'user.subscribe.activate', // Your new paywall page
-                'user.subscribe.now',      // Your payment processing route
-                'user.logout'
-            ];
-
-            // Check if the current route is in the allowed list
-            if (in_array($request->route()->getName(), $allowedRoutes)) {
-                return $next($request);
-            }
-
             if ($request->is('api/*')) {
                 $notify[] = 'Please complete your profile to go next';
                 return response()->json([
-                    'remark' => 'profile_incomplete',
-                    'status' => 'error',
-                    'message' => ['error' => $notify],
+                    'remark'=>'profile_incomplete',
+                    'status'=>'error',
+                    'message'=>['error'=>$notify],
                 ]);
-            } else {
+            }else{
                 return to_route('user.data');
             }
         }
-
         return $next($request);
     }
 }

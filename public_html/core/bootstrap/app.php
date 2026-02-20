@@ -20,8 +20,6 @@ use App\Http\Middleware\RedirectIfNotInfluencer;
 use App\Http\Middleware\InfluencerRegistrationStep;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\CheckSubscription;
-use App\Http\Middleware\CheckServiceCount; // Ensure this is imported
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -63,7 +61,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
             'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
-            'subscribed' => \App\Http\Middleware\CheckSubscription::class,
             'can' => \Illuminate\Auth\Middleware\Authorize::class,
             'auth' => Authenticate::class,
             'guest' => RedirectIfAuthenticated::class,
@@ -87,9 +84,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'influencer.check'                 => InfluencerCheck::class,
             'influencer.registration.complete' => InfluencerRegistrationStep::class,
             'influencer.guest'                 => RedirectIfInfluencer::class,
-            
-            // NEW GATEKEEPER ADDED HERE
-            'check.services'                   => CheckServiceCount::class,
         ]);
 
         $middleware->validateCsrfTokens(

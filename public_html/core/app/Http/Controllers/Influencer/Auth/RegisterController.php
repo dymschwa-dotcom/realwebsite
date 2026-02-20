@@ -4,191 +4,172 @@ namespace App\Http\Controllers\Influencer\Auth;
 
 use App\Constants\Status;
 use App\Http\Controllers\Controller;
+use App\Lib\Intended;
 use App\Models\AdminNotification;
 use App\Models\Influencer;
-use App\Models\User;
-use App\Models\Category;
-use App\Models\Platform;
-use App\Models\SocialLink;
-use App\Rules\FileTypeValidate;
+use App\Models\UserLogin;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Foundation\Auth\RegistersUsers;
-use Carbon\Carbon;
+use Illuminate\Validation\Rules\Password;
 
 class RegisterController extends Controller {
 
     use RegistersUsers;
 
-    public $activeTemplate;
-
     public function __construct() {
         parent::__construct();
-        $this->activeTemplate = activeTemplate();
-        
-        // Exclude AJAX checks and profile completion from guest middleware
-        $this->middleware('influencer.guest', ['except' => [
-            'influencerData', 
-            'influencerDataSubmit', 
-            'checkUser', 
-            'checkEmail', 
-            'logout'
-        ]]);
     }
 
-    /**
-     * AJAX Username Availability Check (Step 2)
-     */
-    public function checkUser(Request $request)
-    {
-        $exist['exists'] = Influencer::where('username', $request->username)->exists() || 
-                           User::where('username', $request->username)->exists();
-        
-        return response()->json($exist);
+    public function showRegistrationForm() {
+        $reference = @$_GET['reference'];
+        if ($reference) {
+            session()->put('reference', $reference);
+        }
+
+        $pageTitle = "Register";
+        Intended::identifyRoute();
+        return view('Template::influencer.auth.register', compact('pageTitle'));
     }
 
-    /**
-     * AJAX Email Availability Check (Step 1)
-     */
-    public function checkEmail(Request $request)
-    {
-        $exist['exists'] = Influencer::where('email', $request->email)->exists() || 
-                           User::where('email', $request->email)->exists();
-        
-        return response()->json($exist);
-    }
+    protected function validator(array $data) {
 
-    public function redirectTo()
-    {
-        return route('influencer.data');
-    }
+        $passwordValidation = Password::min(6);
 
-    public function showRegistrationForm()
-    {
-        $pageTitle = "Influencer Registration";
-        $info = json_decode(json_encode(getIpInfo()), true);
-        $mobileCode = @$info['code'];
-        $countries = json_decode(file_get_contents(resource_path('views/partials/country.json')));
-        
-        return view($this->activeTemplate . 'influencer.auth.register', compact('pageTitle', 'mobileCode', 'countries'));
-    }
+        if (gs('secure_password')) {
+            $passwordValidation = $passwordValidation->mixedCase()->numbers()->symbols()->uncompromised();
+        }
 
-    protected function validator(array $data)
-    {
-        $general = gs();
-        $agree = $general->agree ? 'required' : 'nullable';
-        return Validator::make($data, [
+        $agree = 'nullable';
+        if (gs('agree')) {
+            $agree = 'required';
+        }
+
+        $validate = Validator::make($data, [
             'firstname' => 'required',
             'lastname'  => 'required',
             'email'     => 'required|string|email|unique:influencers',
-            'password'  => 'required|string|min:6|confirmed',
+            'password'  => ['required', 'confirmed', $passwordValidation],
+            'captcha'   => 'sometimes|required',
             'agree'     => $agree,
+        ], [
+            'firstname.required' => 'The first name field is required',
+            'lastname.required'  => 'The last name field is required',
         ]);
+
+        return $validate;
     }
 
-    protected function create(array $data)
-    {
-        $influencer = new Influencer();
-        $influencer->firstname = $data['firstname'];
-        $influencer->lastname  = $data['lastname'];
-        $influencer->email     = strtolower($data['email']);
-        $influencer->password  = Hash::make($data['password']);
-        $influencer->status    = Status::USER_ACTIVE;
-        $influencer->ev        = gs()->ev ? Status::NO : Status::YES;
-        $influencer->sv        = gs()->sv ? Status::NO : Status::YES;
-        $influencer->profile_complete = Status::NO; 
+    public function register(Request $request) {
+        if (!gs('influencer_registration')) {
+            $notify[] = ['error', 'Registration not allowed'];
+            return back()->withNotify($notify);
+        }
+        $this->validator($request->all())->validate();
+
+        $request->session()->regenerateToken();
+
+        if (!verifyCaptcha()) {
+            $notify[] = ['error', 'Invalid captcha provided'];
+            return back()->withNotify($notify);
+        }
+
+        event(new Registered($influencer = $this->create($request->all())));
+
+        $this->guard()->login($influencer);
+
+        return $this->registered($request, $influencer)
+        ?: redirect($this->redirectPath());
+    }
+
+    protected function create(array $data) {
+        $referBy = session()->get('reference');
+        if ($referBy) {
+            $referUser = Influencer::where('referral_code', $referBy)->first();
+        } else {
+            $referUser = null;
+        }
+
+        $influencer                = new Influencer();
+        $influencer->email         = strtolower($data['email']);
+        $influencer->firstname     = $data['firstname'];
+        $influencer->lastname      = $data['lastname'];
+        $influencer->password      = Hash::make($data['password']);
+        $influencer->ref_by        = $referUser ? $referUser->id : 0;
+        $influencer->referral_code = getTrx();
+        $influencer->kv            = gs('kv') ? Status::NO : Status::YES;
+        $influencer->ev            = gs('ev') ? Status::NO : Status::YES;
+        $influencer->sv            = gs('sv') ? Status::NO : Status::YES;
+        $influencer->ts            = Status::DISABLE;
+        $influencer->tv            = Status::ENABLE;
         $influencer->save();
+
+        $adminNotification                = new AdminNotification();
+        $adminNotification->influencer_id = $influencer->id;
+        $adminNotification->title         = 'New influencer registered';
+        $adminNotification->click_url     = urlPath('admin.users.detail', $influencer->id);
+        $adminNotification->save();
+
+        //Login Log Create
+        $ip              = getRealIP();
+        $exist           = UserLogin::where('influencer_id', $ip)->first();
+        $influencerLogin = new UserLogin();
+
+        if ($exist) {
+            $influencerLogin->longitude    = $exist->longitude;
+            $influencerLogin->latitude     = $exist->latitude;
+            $influencerLogin->city         = $exist->city;
+            $influencerLogin->country_code = $exist->country_code;
+            $influencerLogin->country      = $exist->country;
+        } else {
+            $info                          = json_decode(json_encode(getIpInfo()), true);
+            $influencerLogin->longitude    = @implode(',', $info['long']);
+            $influencerLogin->latitude     = @implode(',', $info['lat']);
+            $influencerLogin->city         = @implode(',', $info['city']);
+            $influencerLogin->country_code = @implode(',', $info['code']);
+            $influencerLogin->country      = @implode(',', $info['country']);
+        }
+
+        $influencerAgent                = osBrowser();
+        $influencerLogin->influencer_id = $influencer->id;
+        $influencerLogin->user_ip       = $ip;
+
+        $influencerLogin->browser = @$influencerAgent['browser'];
+        $influencerLogin->os      = @$influencerAgent['os_platform'];
+        $influencerLogin->save();
 
         return $influencer;
     }
 
-    protected function guard()
-    {
+    protected function guard() {
         return auth()->guard('influencer');
     }
 
-    public function influencerData()
-    {
-        $influencer = authInfluencer();
-        if ($influencer->profile_complete == Status::YES) {
-            return to_route('influencer.home');
+    public function checkUser(Request $request) {
+        $exist['data'] = false;
+        $exist['type'] = null;
+        if ($request->email) {
+            $exist['data']  = Influencer::where('email', $request->email)->exists();
+            $exist['type']  = 'email';
+            $exist['field'] = 'Email';
         }
-        
-        $pageTitle = "Complete Your Profile";
-        $countries = json_decode(file_get_contents(resource_path('views/partials/country.json')));
-        $categories = Category::active()->orderBy('name')->get();
-        $platforms = Platform::active()->get();
-
-        return view($this->activeTemplate . 'influencer.user_data', compact('pageTitle', 'influencer', 'countries', 'categories', 'platforms'));
+        if ($request->mobile) {
+            $exist['data']  = Influencer::where('mobile', $request->mobile)->where('dial_code', $request->mobile_code)->exists();
+            $exist['type']  = 'mobile';
+            $exist['field'] = 'Mobile';
+        }
+        if ($request->username) {
+            $exist['data']  = Influencer::where('username', $request->username)->exists();
+            $exist['type']  = 'username';
+            $exist['field'] = 'Username';
+        }
+        return response($exist);
     }
 
-    public function influencerDataSubmit(Request $request)
-    {
-        $influencer = authInfluencer();
-        if ($influencer->profile_complete == Status::YES) {
-            return to_route('influencer.home');
-        }
-
-        $request->validate([
-            'username'    => 'required|string|alpha_num|unique:influencers,username|min:6',
-            'country'     => 'required|string',
-            'city'        => 'required|string',
-            'mobile'      => 'required|numeric',
-            'gender'      => 'required|in:male,female,other',
-            'birth_date'  => 'required|date_format:d-m-Y',
-            'category'    => 'required|array|min:1',
-            'image'       => ['required', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png'])],
-        ]);
-
-        if ($request->hasFile('image')) {
-            try {
-                $influencer->image = fileUploader($request->image, getFilePath('influencer'), getFileSize('influencer'));
-            } catch (\Exception $exp) {
-                $notify[] = ['error', 'Couldn\'t upload your image'];
-                return back()->withNotify($notify);
-            }
-        }
-
-        $influencer->username     = $request->username;
-        $influencer->country_code = $request->country_code;
-        $influencer->mobile       = $request->mobile_code . $request->mobile;
-        $influencer->gender       = $request->gender;
-        $influencer->city         = $request->city;
-        
-        try {
-            $influencer->birth_date = Carbon::createFromFormat('d-m-Y', $request->birth_date)->format('Y-m-d');
-        } catch (\Exception $e) {
-            $notify[] = ['error', 'Invalid birth date format.'];
-            return back()->withInput()->withNotify($notify);
-        }
-
-        $influencer->profile_complete = Status::YES;
-        $influencer->save();
-
-        $influencer->categories()->sync($request->category);
-
-        if ($request->social_link) {
-            foreach ($request->social_link as $platformId => $url) {
-                if (!empty($url)) {
-                    SocialLink::updateOrCreate(
-                        ['influencer_id' => $influencer->id, 'platform_id' => $platformId],
-                        [
-                            'social_link' => $url,
-                            'followers'   => isset($request->followers[$platformId]) ? $request->followers[$platformId] : 0
-                        ]
-                    );
-                }
-            }
-        }
-
-        $adminNotification = new AdminNotification();
-        $adminNotification->influencer_id = $influencer->id;
-        $adminNotification->title = 'Influencer profile completed: '.$influencer->username;
-        $adminNotification->click_url = urlPath('admin.users.detail', $influencer->id);
-        $adminNotification->save();
-
-        $notify[] = ['success', 'Registration completed successfully!'];
-        return to_route('influencer.services.add')->withNotify($notify);
+    public function registered() {
+        return to_route('influencer.home');
     }
+
 }

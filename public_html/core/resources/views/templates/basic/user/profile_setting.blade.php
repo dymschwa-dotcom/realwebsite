@@ -59,30 +59,6 @@
                                     <input class="form--control" type="text" name="website" value="{{ $user->website }}">
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form--label">@lang('State')</label>
-                                    <input class="form--control" name="state" type="text" value="{{ @$user->state }}" placeholder="@lang('State')">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form--label">@lang('Zip Code')</label>
-                                    <input class="form--control" name="zip" type="text" value="{{ @$user->zip }}" placeholder="@lang('Zip Code')">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form--label">@lang('City')</label>
-                                    <input class="form--control" name="city" type="text" value="{{ @$user->city }}" placeholder="@lang('City')">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form--label">@lang('Address')</label>
-                                    <input class="form--control" name="address" type="text" value="{{ @$user->address }}" placeholder="@lang('Address')">
-                                </div>
-                            </div>
                         </div>
                         <button class="btn btn--base w-100" type="submit">@lang('Submit')</button>
                     </form>

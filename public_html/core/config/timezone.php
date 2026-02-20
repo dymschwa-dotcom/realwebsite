@@ -1,1 +1,1 @@
-<?php $timezone = "Pacific/Auckland" ?>
+<?php $timezone = "UTC" ?>

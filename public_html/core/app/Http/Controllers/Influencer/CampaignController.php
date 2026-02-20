@@ -24,32 +24,16 @@ class CampaignController extends Controller {
         });
         $this->userType = 'influencer';
     }
-
-    public function campaignLog(Request $request) {
-        return $this->log($request);
-    }
-
-    public function showProposalForm($id) {
-        $campaign  = Campaign::onGoing()->findOrFail($id);
-        $pageTitle = 'Submit Proposal';
-        $influencer = $this->user;
-
-        $alreadyApplied = Participant::where('campaign_id', $campaign->id)
-            ->where('influencer_id', $influencer->id)
-            ->exists();
-
-        if ($alreadyApplied) {
-            $notify[] = ['error', 'You have already submitted a proposal for this campaign.';
-            return back()->withNotify($notify);
-        }
-
-        return view($this->activeTemplate . 'influencer.campaign.propose', compact('campaign', 'pageTitle'));
-    }
+   
 
     public function participate(Request $request, $id) {
         $campaign   = Campaign::onGoing()->findOrFail(decrypt($id));
         $influencer = authInfluencer();
-        $this->validation($campaign, $influencer);
+        $invitedCampaign = InviteCampaign::inactive()->where('influencer_id', $influencer->id)->where('campaign_id', $campaign->id)->first();
+
+        if ($campaign->campaign_type != 'invite' || !$invitedCampaign) {
+            $this->validation($campaign, $influencer);
+        }
 
         if ($campaign->payment_type == 'paid') {
             $request->validate([
@@ -63,7 +47,6 @@ class CampaignController extends Controller {
             return back()->withNotify($notify);
         }
 
-        $invitedCampaign = InviteCampaign::inactive()->where('influencer_id', $influencer->id)->where('campaign_id', $campaign->id)->first();
         if ($invitedCampaign) {
             $invitedCampaign->status = Status::ENABLE;
             $invitedCampaign->save();
@@ -81,12 +64,19 @@ class CampaignController extends Controller {
         $adminNotification                = new AdminNotification();
         $adminNotification->influencer_id = $influencer->id;
         $adminNotification->title         = 'New participate request for campaign';
-        $adminNotification->click_url      = urlPath('admin.campaign.participants', $campaign->id);
+        $adminNotification->click_url     = urlPath('admin.campaign.participants', $campaign->id);
         $adminNotification->save();
 
         notify($campaign->user, 'CAMPAIGN_PARTICIPANT_REQUEST', [
             'brand'              => @$campaign->user->username,
             'influencer'         => $influencer->username,
+            'participant_number' => $participant->participant_number,
+            'title'              => $campaign->title,
+        ]);
+
+        notify($influencer, 'PARTICIPATE_REQUEST_PENDING', [
+            'influencer'         => $influencer->username,
+            'brand'              => @$campaign->user->brand_name,
             'participant_number' => $participant->participant_number,
             'title'              => $campaign->title,
         ]);
@@ -101,13 +91,30 @@ class CampaignController extends Controller {
     protected function validation($campaign, $influencer) {
         $gender = $campaign->influencer_requirements->gender;
         if (!in_array($influencer->gender, $gender)) {
-            throw ValidationException::withMessages(["Doesn't match the target gender"]);
+            throw ValidationException::withMessages(["error" => "Doesn't match the target gender"]);
         }
         if (!$influencer->socialLink) {
-            throw ValidationException::withMessages(["You have to connect social link"]);
+            throw ValidationException::withMessages(["error" => "You have to connect social link"]);
         }
         if (!$influencer->kv) {
-             throw ValidationException::withMessages(["You must complete KYC verification first."]);
+            return to_route('influencer.kyc.form');
+        }
+        foreach ($campaign->platforms as $platform) {
+            $social = $influencer->socialLink()->where('platform_id', $platform->id)->first();
+            if (!$social) {
+                throw ValidationException::withMessages(["error" => "You don't have $platform->name follower"]);
+            }
+            $startFollowerRange = 'follower_' . strtolower($platform->name) . '_start';
+            $endFollowerRange   = 'follower_' . strtolower($platform->name) . '_end';
+            $campaignStartRange = $campaign->influencer_requirements->$startFollowerRange;
+            $campaignEndRange   = $campaign->influencer_requirements->$endFollowerRange;
+
+            if ($campaignStartRange > $social->followers) {
+                throw ValidationException::withMessages(["error" => "You don't apply because of $platform->name follower's limitation"]);
+            }
+            if ($social->followers > $campaignEndRange) {
+                throw ValidationException::withMessages(["error" => "You don't apply because of $platform->name follower's limitation"]);
+            }
         }
     }
 
@@ -120,25 +127,33 @@ class CampaignController extends Controller {
             $participates->$status();
         }
 
-        $campaigns = $participates->with('campaign.user')
-            ->searchable(['participant_number', 'campaign.user:brand_name'])
-            ->orderBy('id', 'desc')
-            ->paginate(getPaginate());
+        $allParticipates = (clone $participates)->with('campaign.user')->searchable(['participant_number', 'campaign.user:brand_name'])->orderBy('id', 'desc')->get();
+        
+        $generalCampaigns = $allParticipates->filter(function($p) {
+            return $p->campaign->campaign_type == 'general';
+        });
 
-        return view($this->activeTemplate . 'influencer.campaign.log', compact('pageTitle', 'campaigns'));
+        $directWorkstreams = $allParticipates->filter(function($p) {
+            return $p->campaign->campaign_type != 'general';
+        })->groupBy(function($p) {
+            return $p->campaign->user_id;
+        });
+
+        $participates = $participates->with('campaign.user')->orderBy('id', 'desc')->paginate(getPaginate());
+        return view('Template::influencer.campaign.log', compact('pageTitle', 'participates', 'generalCampaigns', 'directWorkstreams'));
     }
 
     public function view($id) {
         $participate = Participant::where('influencer_id', authInfluencerId())->with('campaign')->findOrFail($id);
         $pageTitle   = 'Campaign - ' . $participate->participant_number;
         $campaign    = $participate->campaign;
-        return view($this->activeTemplate . 'influencer.campaign.view', compact('pageTitle', 'participate', 'campaign'));
+        return view('Template::influencer.campaign.view', compact('pageTitle', 'participate', 'campaign'));
     }
 
     public function detail($id) {
         $participant = Participant::where('influencer_id', authInfluencerId())->with('campaign')->findOrFail($id);
         $pageTitle   = 'Detail Campaign - ' . $participant->participant_number;
-        return view($this->activeTemplate . 'influencer.campaign.detail', compact('pageTitle', 'participant'));
+        return view('Template::influencer.campaign.detail', compact('pageTitle', 'participant'));
     }
 
     public function deliver($id) {
@@ -182,6 +197,15 @@ class CampaignController extends Controller {
             $transaction->trx          = getTrx();
             $transaction->remark       = 'campaign_cancel';
             $transaction->save();
+
+            notify($brand, 'CAMPAIGN_JOB_CANCELED', [
+                'title'              => $campaign->title,
+                'brand'              => $brand->username,
+                'influencer'         => $participant->influencer->username,
+                'participant_number' => $participant->participant_number,
+                'budget'             => showAmount($participant->budget,currencyFormat:false),
+                'trx'                => $transaction->trx,
+            ]);
         }
 
         recentActivity('Influencer canceled your campaign job', $participant->campaign->user_id);
@@ -196,60 +220,6 @@ class CampaignController extends Controller {
         $inviteCampaigns = InviteCampaign::inactive()->where('influencer_id', authInfluencerId())->withWhereHas('campaign', function ($query) {
             $query->onGoing()->with('platforms')->withCount('participants');
         })->paginate(getPaginate());
-        return view($this->activeTemplate . 'influencer.campaign.invite', compact('pageTitle', 'inviteCampaigns'));
-    }
-
-  public function inviteSubmit(Request $request) {
-    // 1. Validate
-    $request->validate([
-        'campaign_id'     => 'nullable|integer',
-        'conversation_id' => 'required|integer',
-        'message'         => 'required|string',
-        'budget'          => 'required|numeric|min:1',
-        'title'           => 'required|string|max:255',
-    ]);
-
-    $influencer = authInfluencer();
-
-    // 2. Create Participant Record (The Contract)
-    $participant                     = new Participant();
-    $participant->influencer_id      = $influencer->id;
-    $participant->campaign_id        = $request->campaign_id ?: null;
-    $participant->budget             = $request->budget;
-    $participant->participant_number = getTrx();
-    $participant->invitation_letter  = $request->title;
-    $participant->status             = 0;
-    $participant->save();
-
-    // 3. MANUAL MESSAGE SAVE (Don't use Trait functions here)
-    $message = new \App\Models\Message();
-    $message->conversation_id = $request->conversation_id;
-    $message->sender_id       = $influencer->id;
-    $message->sender_type     = 'influencer';
-    $message->message         = $request->title; 
-    $message->type            = 'contract_proposal'; // <--- THIS MUST BE HERE
-    $message->participant_id  = $participant->id;
-    $message->save();
-
-    // 4. Return JSON for AJAX
-    return response()->json([
-        'status'       => 'success',
-        'message'      => 'Proposal sent!',
-        'message_html' => view($this->activeTemplate . 'partials.message_bubble', ['message' => $message])->render(),
-        'last_id'      => $message->id
-    ]);
-}
-
-    public function previous($step, $slug = null) {
-        $step = (int) $step;
-        $step--;
-
-        if ($step < 0) {
-            $step = 0;
-        }
-
-        // Specific logic for INFLUENCER "previous" action
-        return redirect()->route('influencer.campaign.create.wizard', ['step' => $step, 'slug' => $slug]);
+        return view('Template::influencer.campaign.invite', compact('pageTitle', 'inviteCampaigns'));
     }
 }
-

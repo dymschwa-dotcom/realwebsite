@@ -39,9 +39,19 @@ class Participant extends Model {
                 $html = '<span class="badge badge--secondary">' . trans("Refunded") . '</span>';
             } else if ($this->status == Status::CAMPAIGN_JOB_CANCELED) {
                 $html = '<span class="badge badge--danger">' . trans("Cancelled") . '</span>';
+            } else if ($this->status == Status::PARTICIPATE_INQUIRY) {
+                $html = '<span class="badge badge--info">' . trans("Inquiry") . '</span>';
+            } else if ($this->status == Status::PARTICIPATE_PROPOSAL) {
+                $html = '<span class="badge badge--warning">' . trans("Proposal") . '</span>';
             }
             return $html;
         });
+    }
+    public function scopeInquiry($query) {
+        return $query->where('status', Status::PARTICIPATE_INQUIRY);
+    }
+    public function scopeProposal($query) {
+        return $query->where('status', Status::PARTICIPATE_PROPOSAL);
     }
     public function scopePending($query) {
         return $query->where('status', Status::PARTICIPATE_REQUEST_PENDING);
@@ -69,7 +79,8 @@ class Participant extends Model {
     }
     public function scopeAuthCampaign($query) {
         return $query->withWhereHas('campaign', function ($q) {
-            $q->approved()->where('user_id', auth()->id())->with('user');
+            $q->where('user_id', auth()->id())->with('user');
         });
     }
 }
+

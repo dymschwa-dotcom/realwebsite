@@ -141,47 +141,52 @@
                         </div>
                     </div>
 
-                    {{-- City (Location) Pill --}}
-                    <div class="dropdown">
-                        <button class="btn sub-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
-                            @lang('City')
-                        </button>
-                        <div class="dropdown-menu giant-pill-menu p-4">
-                            <h6 class="mb-4 fw-bold border-bottom pb-2">@lang('Filter by City')</h6>
-                            <div class="category-grid" style="max-height: 250px;">
-                                @foreach ($cities as $city)
-                                    <div class="form-check mb-2">
-                                        <input class="form-check-input" type="checkbox" name="city[]" value="{{ $city }}" id="city_{{ $loop->index }}" @checked(in_array($city, request()->city ?? []))>
-                                        <label class="form-check-label small ms-2" for="city_{{ $loop->index }}">{{ __($city) }}</label>
-                                    </div>
-                                @endforeach
-                            </div>
-                            <button type="submit" class="btn btn--base btn--sm w-100 mt-4 py-3 rounded-pill">@lang('Apply City')</button>
-                        </div>
-                    </div>
+                    {{-- Region (Location) Pill --}}
+<div class="dropdown">
+    <button class="btn sub-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+        @lang('Location')
+    </button>
+    <div class="dropdown-menu giant-pill-menu p-4">
+        <h6 class="mb-4 fw-bold border-bottom pb-2">@lang('Filter by Region')</h6>
+        <div class="category-grid" style="max-height: 350px;">
+            @php
+                $regions = json_decode(file_get_contents(resource_path('views/partials/regions.json')), true);
+                $allRegions = array_merge($regions['New Zealand'], $regions['Australia']);
+                sort($allRegions);
+            @endphp
+            @foreach ($allRegions as $region)
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" name="region[]" value="{{ $region }}" id="reg_{{ $loop->index }}" @checked(in_array($region, request()->region ?? []))>
+                    <label class="form-check-label small ms-2" for="reg_{{ $loop->index }}">{{ __($region) }}</label>
+                </div>
+            @endforeach
+        </div>
+        <button type="submit" class="btn btn--base btn--sm w-100 mt-4 py-3 rounded-pill">@lang('Apply Location')</button>
+    </div>
+</div> {{-- This was the missing closing div that was breaking the line --}}
 
-                    {{-- Age Pill --}}
-                    <div class="dropdown">
-                        <button class="btn sub-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
-                            @lang('Age')
-                        </button>
-                        <div class="dropdown-menu giant-pill-menu p-4">
-                            <h6 class="mb-4 fw-bold border-bottom pb-2">@lang('Age Bracket')</h6>
-                            <div class="row g-2">
-                                @foreach(['18_24' => '18 - 24', '25_34' => '25 - 34', '35_44' => '35 - 44', '45_100' => '45+'] as $key => $label)
-                                    <div class="col-6">
-                                        <div class="form-check mb-3">
-                                            <input class="form-check-input" type="checkbox" name="age_range[]" value="{{ $key }}" id="age_{{ $key }}" @checked(in_array($key, request()->age_range ?? []))>
-                                            <label class="form-check-label fw-medium ms-2 text-nowrap" for="age_{{ $key }}">{{ $label }}</label>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                            <button type="submit" class="btn btn--base btn--sm w-100 mt-3 py-3 rounded-pill">@lang('Apply Age')</button>
-                        </div>
+{{-- Age Pill --}}
+<div class="dropdown">
+    <button class="btn sub-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+        @lang('Age')
+    </button>
+    <div class="dropdown-menu giant-pill-menu p-4">
+        <h6 class="mb-4 fw-bold border-bottom pb-2">@lang('Age Bracket')</h6>
+        <div class="row g-2">
+            @foreach(['18_24' => '18 - 24', '25_34' => '25 - 34', '35_44' => '35 - 44', '45_100' => '45+'] as $key => $label)
+                <div class="col-6">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="age_range[]" value="{{ $key }}" id="age_{{ $key }}" @checked(in_array($key, request()->age_range ?? []))>
+                        <label class="form-check-label fw-medium ms-2 text-nowrap" for="age_{{ $key }}">{{ $label }}</label>
                     </div>
+                </div>
+            @endforeach
+        </div>
+        <button type="submit" class="btn btn--base btn--sm w-100 mt-3 py-3 rounded-pill">@lang('Apply Age')</button>
+    </div>
+</div>
 
-                    <a href="{{ route('influencer.all') }}" class="clear-all-link ms-4 text-nowrap">@lang('Clear all filters')</a>
+<a href="{{ route('influencer.all') }}" class="clear-all-link ms-4 text-nowrap">@lang('Clear all filters')</a>
                 </div>
             </form>
 
@@ -218,18 +223,26 @@
     .hero-search-btn:hover { background: #e31c5f; transform: scale(1.08); }
 
     /* MEGA & GIANT DROPDOWNS */
-    .mega-menu-content { width: 100vw !important; max-width: 950px !important; left: 50% !important; transform: translateX(-50%) !important; margin-top: 25px !important; border-radius: 32px !important; z-index: 2000; }
-    
-    .giant-pill-menu { 
-        min-width: 450px !important; 
-        border-radius: 28px !important; 
-        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.18) !important; 
-        border: none !important; 
-        margin-top: 15px !important; 
-        padding: 2.5rem !important;
+    .mega-menu-content {
+        width: 100vw !important;
+        max-width: 950px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        margin-top: 25px !important;
+        border-radius: 32px !important;
+        z-index: 2000;
+        padding: 4rem !important; /* Increased padding */
     }
     
-    .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; max-height: 450px; overflow-y: auto; }
+    .giant-pill-menu {
+        min-width: 450px !important;
+        border-radius: 28px !important;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.18) !important;
+        border: none !important;
+        margin-top: 15px !important;
+        padding: 3.5rem !important; /* Increased padding */
+    }
+    .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; max-height: 450px; overflow-y: auto; } /* Increased gap */
     
     .text-nowrap { white-space: nowrap !important; }
 
@@ -244,5 +257,93 @@
     /* CHECKBOX THEME */
     .custom--check .form-check-input { width: 1.4em; height: 1.4em; cursor: pointer; border: 2px solid #cbd5e0; }
     .custom--check .form-check-input:checked { background-color: #ff385c; border-color: #ff385c; }
+
+    /* COLLABSTR STYLE INFLUENCER CARDS */
+    .influencer-card {
+        border: none;
+        background: transparent;
+        transition: transform 0.2s ease-in-out;
+    }
+    .influencer-card:hover {
+        transform: translateY(-5px);
+    }
+    .influencer-card__img-wrapper {
+        position: relative;
+        aspect-ratio: 4 / 5;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .influencer-card__img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: scale 0.4s ease;
+    }
+    .influencer-card:hover .influencer-card__img {
+        scale: 1.05;
+    }
+    .influencer-card__overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        padding: 20px;
+        background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+        pointer-events: none;
+    }
+    .influencer-card__info-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .influencer-card__name {
+        font-size: 18px;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .influencer-card__rating {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 14px;
+    }
+    .star-icon {
+        color: #ffb400;
+    }
+    .influencer-card__location {
+        font-size: 14px;
+        font-weight: 500;
+    }
+    .influencer-card__location i {
+        font-size: 16px;
+    }
+
+    .favoriteBtn {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        z-index: 10;
+        width: 35px;
+        height: 35px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 18px;
+        color: #ff385c;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .favoriteBtn:hover {
+        background: #fff;
+        transform: scale(1.1);
+    }
+    .favoriteBtn.active i {
+        font-weight: 900;
+    }
 </style>
 @endpush
+

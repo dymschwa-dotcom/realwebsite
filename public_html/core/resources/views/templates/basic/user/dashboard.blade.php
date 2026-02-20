@@ -126,7 +126,7 @@
                         <span class="content"><a href="{{ route('user.campaign.index') }}">@lang('All')</a></span>
                     </div>
                     <div class="campaign-status__item-right">
-                        <span>{{ $data['total_campaigns'] }}</span>
+                        <span>{{ $data['campaign'] }}</span>
                     </div>
                 </div>
                 <div class="campaign-status__item">

@@ -5,112 +5,134 @@
             <a href="{{ route('user.campaign.create') }}" class="btn btn--base outline btn--sm" type="button"><i class="las la-bullhorn"></i> @lang('Create Campaign')</a>
         </div>
     </div>
-    <div class="dashbaord-table-header">
-        <div class="brand-short-inner">
-            <select name="campaign_status" class="form-control form--control select2" data-minimum-results-for-search="-1">
-                <option value="index" data-action="{{ route('user.campaign.index') }}" @selected(request()->routeIs('user.campaign.index'))>@lang('All Campaigns')</option>
-                <option value="pending" data-action="{{ route('user.campaign.pending') }}" @selected(request()->routeIs('user.campaign.pending'))>@lang('Pending Campaigns')</option>
-                <option value="approved" data-action="{{ route('user.campaign.approved') }}" @selected(request()->routeIs('user.campaign.approved'))>@lang('Approved Campaigns')</option>
-                <option value="rejected" data-action="{{ route('user.campaign.rejected') }}" @selected(request()->routeIs('user.campaign.rejected'))>@lang('Rejected Campaigns')</option>
-                <option value="incompleted" data-action="{{ route('user.campaign.incompleted') }}" @selected(request()->routeIs('user.campaign.incompleted'))>@lang('Incompleted Campaigns')</option>
-            </select>
-        </div>
-        <div class="dashbaord-table-header-right d-flex flex-wrap gap-3">
-            <form class="search-form">
-                <input class="form--control" name="search" type="search" value="{{ request()->search }}" placeholder="@lang('Search...')">
-                <button class="search-form__btn" type="submit"><i class="fas fa-search"></i></button>
-            </form>
-        </div>
-    </div>
-    <div class="row gy-4">
-        <div class="dashboard-table">
-            <table class="table--responsive--xxl table">
-                <thead>
-                    <tr>
-                        <th>@lang('Title')</th>
-                        <th>@lang('Type')</th>
-                        <th>@lang('Participants')</th>
-                        <th>@lang('Requered Influencer')</th>
-                        <th>@lang('Status')</th>
-                        <th>@lang('Action')</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($campaigns as $campaign)
+    
+        <!-- SECTION 1: CAMPAIGNS (General Casting Calls) -->
+    @if($generalCampaigns->count() > 0)
+    <h5 class="mb-3">@lang('Campaigns')</h5>
+    <div class="card custom--card mb-5">
+        <div class="card-body p-0">
+            <div class="table-responsive--md table-responsive">
+                <table class="table custom--table">
+                    <thead>
                         <tr>
-                            <td><span>{{ __(strLimit($campaign->title, 30)) }}</span></td>
-                            <td>{{ __(ucfirst($campaign->campaign_type)) }}</td>
-                            <td><span>{{ getAmount(@$campaign->participants_count) }}</span></td>
-                            <td><span>{{ getAmount(@$campaign->influencer_requirements->required_influencer) }}</span></td>
+                            <th>@lang('Title')</th>
+                            <th>@lang('Status')</th>
+                            <th>@lang('Stats')</th>
+                            <th>@lang('Action')</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($generalCampaigns as $campaign)
+                        <tr>
                             <td>
-                                <div class="d-flex justify-content-center align-items-center gap-1">
-                                    @php
-                                        echo $campaign->statusBadge;
-                                    @endphp
-                                    @if ($campaign->status == Status::CAMPAIGN_REJECTED)
-                                        <span class="reject-alert text--danger" data-reject_reason="{{ $campaign->reason }}"><i class="las la-info-circle"></i></span>
-                                    @endif
-                                </div>
+                                <span class="fw-bold">{{ __($campaign->title) }}</span>
                             </td>
                             <td>
-                                <div class="dropdown table-action">
-                                    <span id="dropdownMenuLink" data-bs-toggle="dropdown" role="button" aria-expanded="false">
-                                        <i class="las la-ellipsis-v"></i>
+                                @php echo $campaign->statusBadge; @endphp
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <span class="text-warning" title="@lang('Pending')">
+                                        <i class="las la-clock"></i> {{ $campaign->pending_count }}
                                     </span>
-                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-                                        <li>
-                                            @if ($campaign->status == Status::CAMPAIGN_INCOMPLETE)
-                                                <a class="dropdown-item" href="{{ route('user.campaign.create', [$campaign->campaign_step, $campaign->slug]) }}">
-                                                    <i class="las la-edit"></i> @lang('Complete Now')
-                                                </a>
-                                            @elseif($campaign->status == Status::CAMPAIGN_PENDING)
-                                                <a class="dropdown-item" href="{{ route('user.campaign.create', [0, $campaign->slug, 'edit']) }}">
-                                                    <i class="las la-edit"></i> @lang('Edit')
-                                                </a>
-                                            @endif
-                                        </li>
-                                        @if ($campaign->status != Status::CAMPAIGN_INCOMPLETE)
-                                            <li>
-                                                <a class="dropdown-item" href="{{ route('user.campaign.view', $campaign->id) }}">
-                                                    <i class="las la-eye"></i> @lang('View')
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item position-relative" href="{{ route('user.participant.list', $campaign->id) }}">
-                                                    <i class="las la-users"></i> @lang('Participants')
-                                                    @if ($campaign->participants_count_pending)
-                                                        <div class="participant-pending-alert">{{ $campaign->participants_count_pending }}</div>
-                                                    @endif
-                                                </a>
-                                            </li>
-                                        @endif
-
-                                        @if ($campaign->campaign_type == 'invite' && $campaign->status == Status::CAMPAIGN_APPROVED)
-                                            <li>
-                                                <a class="dropdown-item" href="{{ route('user.campaign.invite.form', $campaign->id) }}">
-                                                    <i class="las la-gift"></i> @lang('Invite')
-                                                </a>
-                                            </li>
-                                        @endif
-                                    </ul>
+                                    <span class="text-success ms-2" title="@lang('Hired')">
+                                        <i class="las la-check-circle"></i> {{ $campaign->hired_count }}
+                                    </span>
                                 </div>
                             </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td class="text-center not-found" colspan="100%">
-                                <div>
-                                    <i class="las la-2x la-bullhorn"></i>
-                                    <br>
-                                    <span>@lang('No campaign found yet!')</span>
-                                </div>
+                            <td>
+                                <a href="{{ route('user.participant.list', $campaign->id) }}" class="btn btn--sm btn--base outline" data-bs-toggle="tooltip" title="@lang('Manage Participants')">
+                                    <i class="las la-users"></i>
+                                </a>
+                                <a href="{{ route('user.campaign.view', $campaign->id) }}" class="btn btn--sm btn--info outline" data-bs-toggle="tooltip" title="@lang('View Details')">
+                                    <i class="las la-eye"></i>
+                                </a>
                             </td>
                         </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
+    @endif
+
+        <!-- SECTION 2: DIRECT RELATIONSHIPS (Shadow Campaigns) -->
+    <h5 class="mb-3">@lang('My Influencers')</h5>
+    <div class="accordion custom--accordion" id="influencerAccordion">
+        @forelse($directWorkstreams as $influencerId => $jobs)
+            @php 
+                $influencer = $jobs->first()->influencer; 
+                $pendingJobs = $jobs->where('status', Status::PARTICIPATE_PROPOSAL);
+            @endphp
+
+                        <div class="accordion-item crm-card shadow-sm mb-3 border-0">
+                <div class="accordion-header" id="heading{{ $influencerId }}">
+                    <div class="card-body p-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-6 d-flex align-items-center gap-3">
+                                <button class="accordion-button collapsed p-0 bg-transparent border-0 shadow-none w-auto" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ $influencerId }}" aria-expanded="false" aria-controls="collapse{{ $influencerId }}">
+                                </button>
+                                <img src="{{ getImage(getFilePath('influencer').'/'.$influencer->image, getFileSize('influencer')) }}" 
+                                     class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover;">
+                                <div>
+                                    <h6 class="m-0">{{ $influencer->firstname }}</h6>
+                                    <span class="text-muted small">{{ '@'.$influencer->username }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-end d-flex justify-content-end align-items-center gap-3">
+                                @if($pendingJobs->count() > 0)
+                                    <span class="badge badge--danger" title="@lang('New Proposal')">
+                                        <i class="las la-exclamation-circle"></i> {{ $pendingJobs->count() }}
+                                    </span>
+                                @endif
+                                <a href="{{ route('user.participant.conversation.inbox', $jobs->first()->id) }}" 
+                                   class="btn btn--base px-4">
+                                    <i class="las la-comments"></i> @lang('Open Workspace')
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="collapse{{ $influencerId }}" class="accordion-collapse collapse" aria-labelledby="heading{{ $influencerId }}" data-bs-parent="#influencerAccordion">
+                    <div class="accordion-body pt-0 px-4 pb-4">
+                        <hr class="mt-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm custom--table">
+                                <thead>
+                                    <tr>
+                                        <th>@lang('Project Title')</th>
+                                        <th>@lang('Price')</th>
+                                        <th>@lang('Status')</th>
+                                        <th>@lang('Action')</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($jobs as $job)
+                                    <tr>
+                                        <td>{{ strLimit($job->campaign->title, 40) }}</td>
+                                        <td>{{ showAmount($job->budget) }}</td>
+                                        <td>@php echo $job->statusBadge; @endphp</td>
+                                                                                <td>
+                                            <a href="{{ route('user.participant.conversation.inbox', $job->id) }}" class="btn btn--sm btn--base outline" data-bs-toggle="tooltip" title="@lang('View Workspace')">
+                                                <i class="las la-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @empty
+            <div class="text-center py-5">
+                <p class="text-muted">@lang('No active relationships yet.')</p>
+            </div>
+        @endforelse
+    </div>
+
     @if ($campaigns->hasPages())
         <div class="mt-4">
             {{ paginateLinks($campaigns) }}
@@ -156,10 +178,15 @@
                 modal.modal('show');
             });
 
-            $('[name=campaign_status]').on('change', function() {
+                        $('[name=campaign_status]').on('change', function() {
                 let url = $(this).find('option:selected').data('action');
                 window.location.href = url;
             });
+
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+              return new bootstrap.Tooltip(tooltipTriggerEl)
+            })
         })(jQuery);
     </script>
 @endpush

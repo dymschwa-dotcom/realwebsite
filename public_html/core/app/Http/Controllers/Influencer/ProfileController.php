@@ -3,141 +3,144 @@
 namespace App\Http\Controllers\Influencer;
 
 use App\Http\Controllers\Controller;
+use App\Lib\SocialConnect;
 use App\Models\Category;
-use App\Models\Platform;
 use App\Models\ProfileGallery;
-use App\Models\SocialLink;
 use App\Rules\FileTypeValidate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller {
-
-    protected $activeTemplate;
-
-    public function __construct() {
-        $this->activeTemplate = activeTemplate();
-    }
-
-    /**
-     * Show the profile setting page.
-     */
     public function profile() {
-        $pageTitle  = "Update Profile Details";
-        $influencer = authInfluencer();
-        
-        $influencer->load('socialLinks', 'categories', 'galleries');
-
-        $countries  = json_decode(file_get_contents(resource_path('views/partials/country.json')));
-        $categories = Category::active()->orderBy('name')->get();
-        $platforms  = Platform::active()->get();
-
-        return view($this->activeTemplate . 'influencer.profile_setting', compact(
-            'pageTitle', 
-            'influencer', 
-            'countries', 
-            'categories', 
-            'platforms'
-        ));
+        $pageTitle    = "Profile Setting";
+        $influencer   = auth()->guard('influencer')->user();
+        $categories   = Category::active()->select('id', 'name')->get();
+        $galleries    = $influencer->galleries;
+        $languageData = json_decode(file_get_contents(resource_path('views/partials/languages.json')));
+        $platforms    = \App\Models\Platform::active()->get();
+        $regions      = json_decode(file_get_contents(resource_path('views/partials/regions.json')), true);
+        return view('Template::influencer.profile_setting', compact('pageTitle', 'influencer', 'categories', 'galleries', 'languageData', 'platforms', 'regions'));
     }
 
-    /**
-     * Update the influencer profile.
-     */
     public function submitProfile(Request $request) {
         $request->validate([
-            'firstname'   => 'required|string|max:40',
-            'lastname'    => 'required|string|max:40',
-            'city'        => 'nullable|string|max:40',
-            'bio'         => 'nullable|string|max:1000', // Added Bio validation
-            'gender'      => 'nullable|in:male,female,other',
-            'image'       => ['nullable', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png'])],
-            'category'    => 'nullable|array',
-            'social_link' => 'nullable|array',
-            'followers'   => 'nullable|array',
-            'gallery'     => 'nullable|array', // Added Gallery array validation
-            'gallery.*'   => ['image', new FileTypeValidate(['jpg', 'jpeg', 'png'])]
+            'firstname'    => 'required|string',
+            'lastname'     => 'required|string',
+            'category'     => 'required|array|min:1',
+            'category.*'   => 'integer|exists:categories,id',
+            'bio'          => 'nullable|string|max:255',
+            'gender'       => 'nullable|string|in:male,female,other',
+            'birth_date'   => 'nullable|date_format:Y-m-d|before:tomorrow',
+            'image'        => ['nullable', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png'])],
+            'social_link'  => 'required|array',
+            'followers'    => 'required|array',
+            'package'      => 'required|array|min:1',
+            'package.*.id' => 'nullable|integer',
+            'package.*.name' => 'required|string|max:255',
+            'package.*.description' => 'required|string',
+            'package.*.price' => 'required|numeric|min:0',
+            'package.*.platform_id' => 'nullable|integer|exists:platforms,id',
+            'package.*.delivery_time' => 'nullable|integer|min:1',
+            'package.*.post_count' => 'nullable|integer|min:1',
+            'package.*.video_length' => 'nullable|integer|min:0',
+            'images'       => 'nullable|array',
+            'images.*'     => ['nullable', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png'])],
+            'region'       => 'nullable|string',
+        ], [
+            'firstname.required' => 'The first name field is required',
+            'lastname.required'  => 'The last name field is required',
         ]);
 
         $influencer = authInfluencer();
 
-        // 1. Handle Profile Image Upload
         if ($request->hasFile('image')) {
             try {
-                $old = $influencer->image;
+                $old               = $influencer->image;
                 $influencer->image = fileUploader($request->image, getFilePath('influencer'), getFileSize('influencer'), $old, getFileThumb('influencer'));
             } catch (\Exception $exp) {
-                $notify[] = ['error', 'Couldn\'t upload your profile image'];
+                $notify[] = ['error', 'Couldn\'t upload your image'];
                 return back()->withNotify($notify);
             }
         }
 
-        // 2. Map Basic Info & BIO
-        $influencer->firstname = $request->firstname;
-        $influencer->lastname  = $request->lastname;
-        $influencer->bio       = $request->bio; // FIXED: Saving bio to database
-        $influencer->gender    = $request->gender;
-        $influencer->city      = $request->city;
-        
-        if ($request->country) {
-            $influencer->country_name = $request->country;
+        $influencer->firstname  = $request->firstname;
+        $influencer->lastname   = $request->lastname;
+        $influencer->gender     = $request->gender;
+        $influencer->birth_date = $request->birth_date;
+
+        $influencer->address = $request->address;
+        $influencer->city    = $request->city;
+        $influencer->state   = $request->state;
+        $influencer->zip     = $request->zip;
+        $influencer->bio        = $request->bio;
+        $influencer->region     = $request->region;
+
+        if ($request->category) {
+            $influencer->categories()->sync($request->category);
         }
 
-        $influencer->save();
+        // Handle Social Links
+        foreach ($request->social_link as $platformId => $link) {
+            if ($link) {
+                \App\Models\SocialLink::updateOrCreate(
+                    ['influencer_id' => $influencer->id, 'platform_id' => $platformId],
+                    ['social_link' => $link, 'followers' => $request->followers[$platformId] ?? 0]
+                );
+            } else {
+                \App\Models\SocialLink::where('influencer_id', $influencer->id)->where('platform_id', $platformId)->delete();
+            }
+        }
 
-        // 3. Sync Categories
-        $influencer->categories()->sync($request->category);
+        // Handle Packages
+        $packageIds = [];
+        foreach ($request->package as $item) {
+            if (@$item['id']) {
+                $package = \App\Models\InfluencerPackage::where('influencer_id', $influencer->id)->find($item['id']);
+            } else {
+                $package = new \App\Models\InfluencerPackage();
+                $package->influencer_id = $influencer->id;
+            }
+            if ($package) {
+                $package->name = $item['name'];
+                $package->description = $item['description'];
+                $package->price = $item['price'];
+                $package->platform_id = $item['platform_id'];
+                $package->delivery_time = $item['delivery_time'];
+                $package->post_count = $item['post_count'];
+                $package->video_length = $item['video_length'];
+                $package->save();
+                $packageIds[] = $package->id;
+            }
+        }
+        \App\Models\InfluencerPackage::where('influencer_id', $influencer->id)->whereNotIn('id', $packageIds)->delete();
 
-        // 4. Handle Multi-Image Gallery Upload
-        if ($request->hasFile('gallery')) {
-            foreach ($request->file('gallery') as $file) {
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
                 try {
-                    $newImage = fileUploader($file, getFilePath('profileGallery'), getFileSize('profileGallery'), null, getFileThumb('profileGallery'));
-                    
-                    $gallery                = new ProfileGallery();
+                    $newImage = fileUploader($image, getFilePath('profileGallery'), getFileSize('profileGallery'), null, getFileThumb('profileGallery'));
+                    $gallery                = new \App\Models\ProfileGallery();
                     $gallery->influencer_id = $influencer->id;
                     $gallery->image         = $newImage;
                     $gallery->save();
                 } catch (\Exception $exp) {
-                    // Continue even if one image fails
                 }
             }
         }
 
-        // 5. Fixed Social Links Logic
-        if ($request->social_link) {
-            foreach ($request->social_link as $platformId => $urlValue) {
-                if (!empty($urlValue)) {
-                    SocialLink::updateOrCreate(
-                        [
-                            'influencer_id' => $influencer->id, 
-                            'platform_id'   => $platformId
-                        ],
-                        [
-                            'social_link' => $urlValue,
-                            'followers'   => isset($request->followers[$platformId]) ? (int)$request->followers[$platformId] : 0
-                        ]
-                    );
-                } else {
-                    SocialLink::where('influencer_id', $influencer->id)->where('platform_id', $platformId)->delete();
-                }
-            }
-        }
-        
+        recentActivity('Profile updated successfully', 0, $influencer->id);
+        $influencer->save();
         $notify[] = ['success', 'Profile updated successfully'];
         return back()->withNotify($notify);
     }
 
-    /**
-     * Change Password Logic
-     */
     public function changePassword() {
         $pageTitle = 'Change Password';
-        return view($this->activeTemplate . 'influencer.password', compact('pageTitle'));
+        return view('Template::influencer.password', compact('pageTitle'));
     }
 
     public function submitPassword(Request $request) {
+
         $passwordValidation = Password::min(6);
         if (gs('secure_password')) {
             $passwordValidation = $passwordValidation->mixedCase()->numbers()->symbols()->uncompromised();
@@ -148,26 +151,140 @@ class ProfileController extends Controller {
             'password'         => ['required', 'confirmed', $passwordValidation],
         ]);
 
-        $influencer = authInfluencer();
+        $influencer = auth()->guard('influencer')->user();
         if (Hash::check($request->current_password, $influencer->password)) {
-            $influencer->password = Hash::make($request->password);
+            $password             = Hash::make($request->password);
+            $influencer->password = $password;
             $influencer->save();
             $notify[] = ['success', 'Password changed successfully'];
             return back()->withNotify($notify);
         } else {
-            $notify[] = ['error', 'Current password doesn\'t match!'];
-            return back()->withNotify($notify);
-        }
+            $notify[] = ['error', 'The password doesn\'t match!'];
+        return back()->withNotify($notify);
+    }
     }
 
-    /**
-     * Dedicated method for removing gallery images (used by AJAX or Delete links)
-     */
-    public function removeGalleryImage($id) {
+    public function uploadGalleryImage(Request $request) {
+        $maxUpload = gs('max_image_upload');
+        $request->validate([
+            'images'   => "required|array|max:$maxUpload",
+            'images.*' => ['required', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png'])],
+        ]);
+
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                try {
+                    $newImage = fileUploader($image, getFilePath('profileGallery'), getFileSize('profileGallery'), null, getFileThumb('profileGallery'));
+                } catch (\Exception $exp) {
+                    $notify[] = ['error', 'Couldn\'t upload your image.'];
+                    return back()->withNotify($notify);
+                }
+
+                $gallery                = new ProfileGallery();
+                $gallery->influencer_id = authInfluencerId();
+                $gallery->image         = $newImage;
+                $gallery->save();
+        }
+}
+
+        $notify[] = ['success', 'Images uploaded successfully'];
+        return back()->withNotify($notify);
+    }
+
+    public function remove($id) {
         $gallery = ProfileGallery::where('influencer_id', authInfluencerId())->findOrFail($id);
-        fileManager()->removeFile(getFilePath('profileGallery') . '/' . $gallery->image);
+        $path    = getFilePath('profileGallery') . '/' . $gallery->image;
+        unlink($path);
         $gallery->delete();
         $notify[] = ['success', 'Image removed successfully'];
         return back()->withNotify($notify);
     }
+
+    public function submitSkill(Request $request) {
+
+        $request->validate([
+            "skills"   => "nullable|array",
+            "skills.*" => "required|string",
+        ], [
+            'skills.*' => 'skill field is required',
+        ]);
+
+        $influencer         = authInfluencer();
+        $influencer->skills = $request->skills;
+        $influencer->save();
+
+        recentActivity('Skill added successfully', 0, $influencer->id);
+        $notify[] = ['success', 'Skill added successfully'];
+        return back()->withNotify($notify);
+    }
+
+    public function addLanguage(Request $request) {
+
+        $request->validate([
+            'language'  => 'required|string|max:40',
+            'listening' => 'required|in:Basic,Medium,Fluent',
+            'speaking'  => 'required|in:Basic,Medium,Fluent',
+            'writing'   => 'required|in:Basic,Medium,Fluent',
+        ]);
+
+        $influencer   = authInfluencer();
+        $oldLanguages = authInfluencer()->languages ?? [];
+
+        $addedLanguages = array_keys($oldLanguages);
+
+        if (in_array(strtolower($request->language), array_map('strtolower', $addedLanguages))) {
+            $notify[] = ['error', $request->language . ' already added'];
+            return back()->withNotify($notify);
+        }
+
+        $newLanguage[$request->language] = [
+            'listening' => $request->listening,
+            'speaking'  => $request->speaking,
+            'writing'   => $request->writing,
+        ];
+
+        $languages = array_merge($oldLanguages, $newLanguage);
+
+        $influencer->languages = $languages;
+        $influencer->save();
+
+        recentActivity('Language added successfully', 0, $influencer->id);
+
+        $notify[] = ['success', 'Language added successfully'];
+        return back()->withNotify($notify);
+    }
+
+    public function removeLanguage($language) {
+        $influencer     = authInfluencer();
+        $oldLanguages   = $influencer->languages ?? [];
+        $addedLanguages = array_keys($oldLanguages);
+
+        if (in_array($language, $addedLanguages)) {
+            unset($oldLanguages[$language]);
+        }
+
+        $influencer->languages = $oldLanguages;
+        $influencer->save();
+
+        recentActivity('Language removed successfully', 0, $influencer->id);
+
+        $notify[] = ['success', 'Language removed successfully'];
+        return back()->withNotify($notify);
+    }
+
+    public function socialConnect($provider) {
+        $socialLogin = new SocialConnect($provider);
+        return $socialLogin->redirectDriver();
+    }
+
+    public function callback($provider) {
+        $socialLogin = new SocialConnect($provider);
+        try {
+            return $socialLogin->login();
+        } catch (\Exception $e) {
+            $notify[] = ['error', $e->getMessage()];
+            return to_route('home')->withNotify($notify);
+        }
+    }
 }
+

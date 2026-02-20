@@ -21,14 +21,8 @@
                     @forelse($reviews as $review)
                         <tr>
                             <td>
-    @if($review->participant_id && $review->participant)
-        <a class="text--base" href="{{ route('user.participant.detail', $review->participant_id) }}">
-            {{ $review->participant->participant_number }}
-        </a>
-    @else
-        <span class="text--muted">@lang('N/A')</span>
-    @endif
-</td>
+                                <a class="text--base" href="{{ route('user.participant.detail', @$review->participant_id) }}">{{ @$review->participant->participant_number }}</a>
+                            </td>
                             <td>
                                 <a class="text--base fw-bold" href="{{ route('influencer.profile', [slug($review->influencer->username), $review->influencer_id]) }}" target="_blank">
                                     <span>@</span>{{ __(@$review->influencer->username) }}
@@ -46,15 +40,9 @@
                             </td>
                             <td>
                                 <div class="d-flex justify-content-end flex-wrap gap-1">
-                                    @if($review->participant_id && $review->id)
-    <a class="btn btn--sm btn--warning outline" href="{{ route('user.review.form', [$review->participant_id, $review->id]) }}">
-        <i class="las la-edit"></i> @lang('Edit')
-    </a>
-@else
-    <button class="btn btn--sm btn--secondary outline" disabled title="@lang('Incomplete Data')">
-        <i class="las la-edit"></i> @lang('Edit')
-    </button>
-@endif
+                                    <a class="btn btn--sm btn--warning outline" href="{{ route('user.review.form', [$review->participant_id, $review->id]) }}">
+                                        <i class="las la-edit"></i> @lang('Edit')
+                                    </a>
                                     <button class="btn btn--sm btn--danger confirmationBtn outline" data-action="{{ route('user.review.remove', $review->id) }}" data-question="@lang('Are you sure to remove this review?')" data-btn_class="btn btn--base btn--md">
                                         <i class="las la-trash"></i> @lang('Delete')
                                     </button>

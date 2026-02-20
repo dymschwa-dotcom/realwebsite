@@ -18,14 +18,14 @@ class Status {
     const PAYMENT_PENDING  = 2;
     const PAYMENT_REJECT   = 3;
 
-    const TICKET_OPEN   = 0;
-    const TICKET_ANSWER = 1;
-    const TICKET_REPLY  = 2;
-    const TICKET_CLOSE  = 3;
+    CONST TICKET_OPEN   = 0;
+    CONST TICKET_ANSWER = 1;
+    CONST TICKET_REPLY  = 2;
+    CONST TICKET_CLOSE  = 3;
 
-    const PRIORITY_LOW    = 1;
-    const PRIORITY_MEDIUM = 2;
-    const PRIORITY_HIGH   = 3;
+    CONST PRIORITY_LOW    = 1;
+    CONST PRIORITY_MEDIUM = 2;
+    CONST PRIORITY_HIGH   = 3;
 
     const USER_ACTIVE = 1;
     const USER_BAN    = 0;
@@ -40,13 +40,12 @@ class Status {
     const CUR_TEXT = 2;
     const CUR_SYM  = 3;
 
-    // Campaign General Status
     const CAMPAIGN_INCOMPLETE = 0;
     const CAMPAIGN_APPROVED   = 1;
     const CAMPAIGN_PENDING    = 2;
     const CAMPAIGN_REJECTED   = 3;
+    const CAMPAIGN_COMPLETED  = 4;
 
-    // Campaign Job / Participation Flow
     const PARTICIPATE_REQUEST_PENDING  = 0;
     const PARTICIPATE_REQUEST_ACCEPTED = 1;
     const CAMPAIGN_JOB_DELIVERED       = 2;
@@ -55,8 +54,9 @@ class Status {
     const PARTICIPATE_REQUEST_REJECTED = 5;
     const CAMPAIGN_JOB_REFUNDED        = 6;
     const CAMPAIGN_JOB_CANCELED        = 7;
+    const PARTICIPATE_INQUIRY          = 8;
+    const PARTICIPATE_PROPOSAL         = 9;
 
-    // Campaign Creation Steps
     const CAMPAIGN_BASIC      = 0;
     const CAMPAIGN_CONTENT    = 1;
     const CAMPAIGN_ABOUT      = 2;
@@ -66,9 +66,5 @@ class Status {
     const INFLUENCER_ACTIVE = 1;
     const INFLUENCER_BAN    = 0;
 
-    // --- DASHBOARD HELPER CONSTANTS ---
-    // These map the generic names used in the controller to your specific logic
-    const CAMPAIGN_COMPLETED = 3; // Linked to CAMPAIGN_JOB_COMPLETED
-    const CAMPAIGN_ONGOING   = 1; // Linked to PARTICIPATE_REQUEST_ACCEPTED
-    
 }
+

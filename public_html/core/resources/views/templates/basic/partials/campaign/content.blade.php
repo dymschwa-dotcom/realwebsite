@@ -1,330 +1,351 @@
-<div class="tab-pane fade show active" id="pills-content" role="tabpanel" aria-labelledby="pills-content-tab">
-    {{-- Null Shield: Use 'pending' if slug is missing to prevent 500 error on route generation --}}
-    <form id="contentForm" action="{{ route('user.campaign.content', $campaign->slug ?? 'pending') }}" method="POST">
-        @csrf
-        @php
-            $isInfluencer = auth()->guard('influencer')->check();
-        @endphp
-        <div class="row gap-3">
-            
-            @php
-                // Safely get platform IDs and Names
-                $platforms = $campaign->platforms ?? collect([]);
-                if($platforms->isEmpty() && @$campaign->id){
-                    $platforms = \App\Models\Platform::whereHas('campaigns', function($q) use ($campaign){
-                        $q->where('campaigns.id', $campaign->id);
-                    })->get();
-                }
-                
-                $hasFacebook = $platforms->filter(fn($p) => stripos($p->name, 'facebook') !== false)->first();
-                $hasInstagram = $platforms->filter(fn($p) => stripos($p->name, 'instagram') !== false)->first();
-                $hasTikTok = $platforms->filter(fn($p) => stripos($p->name, 'tiktok') !== false)->first();
-                $hasYouTube = $platforms->filter(fn($p) => stripos($p->name, 'youtube') !== false)->first();
-
-                // Safely decode requirements
-                $requirements = $campaign->content_requirements;
-                if (is_string($requirements)) {
-                    $requirements = json_decode($requirements);
-                }
-            @endphp
-
-            {{-- Facebook Section --}}
-            @if ($hasFacebook)
-                <div class="platform__box">
-                    <div class="social-media">
-                        <h6 class="d-flex gap-2">
-                            <i class="fab fa-facebook text--facebook"></i>
-                            <span> @lang('Facebook')</span>
-                        </h6>
+<form id="contentForm" action="{{ route('user.campaign.content', @$campaign->id) }}" method="POST">
+    @csrf
+    <div class="row gap-3">
+        @if (in_array(1, @$campaign->platformId ?? []))
+            <div class="platform__box">
+                <div class="social-media">
+                    <h6 class="d-flex gap-2">
+                        <i class="fab fa-facebook"></i>
+                        <span> @lang('Facebook')</span>
+                    </h6>
+                </div>
+                <div class="form-group common-style mb-4">
+                    <div class="create-header mb-4">
+                        <label class="form--label mb-0">@lang('Content Type ?') <span
+                                  class="text--danger">*</span></label>
+                        <p class="campaign-desc">@lang('Select the ways in which your brand will be promoted on Facebook.')</p>
                     </div>
-                    <div class="form-group common-style mb-4">
-                        <div class="create-header mb-4">
-                            <label class="form--label mb-0">@lang('Content Type ?') <span class="text--danger">*</span></label>
-                            <p class="campaign-desc">
-                                @if($isInfluencer)
-                                    @lang('Select the types of content you will create for Facebook.')
-                                @else
-                                    @lang('Select the ways in which your brand will be promoted on Facebook.')
-                                @endif
-                            </p>
-                        </div>
 
-                        <div class="d-flex flex-wrap gap-3">
-                            @foreach(['photo', 'video', 'text'] as $type)
-                                <div class="custom--check">
-                                    <div class="d-flex gap-2">
-                                        <div class="form--check d-inline-block">
-                                            <input class="form-check-input" id="facebook_type_{{ $type }}" name="facebook_type[]" type="checkbox" value="{{ $type }}" 
-                                                @checked(in_array($type, (array)(@$requirements->facebook_type ?? [])))>
-                                        </div>
-                                        <label class="title" for="facebook_type_{{ $type }}">@lang(ucfirst($type))</label>
-                                    </div>
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="facebook_type_photo"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="facebook_type_photo" name="facebook_type[]" type="checkbox" value="photo" @checked(in_array('photo', old('facebook_type', @$campaign->content_requirements->facebook_type) ?? []))>
                                 </div>
-                            @endforeach
+                                <span class="title">@lang('Photo')</span>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="form-group common-style mb-4">
-                        <div class="create-header mb-4">
-                            <label class="form--label mb-0">@lang('Content Placement ?') <span class="text--danger">*</span></label>
-                            <p class="campaign-desc">
-                                @if($isInfluencer)
-                                    @lang('Where will you post the content?')
-                                @else
-                                    @lang('Where will the influencer post?')
-                                @endif
-                            </p>
-                        </div>
-                        <div class="d-flex flex-wrap gap-3">
-                            @foreach(['post', 'story', 'reels'] as $place)
-                                <div class="custom--check">
-                                    <div class="d-flex gap-2">
-                                        <div class="form--check d-inline-block">
-                                            <input class="form-check-input" id="facebook_placement_{{ $place }}" name="facebook_placement[]" type="checkbox" value="{{ $place }}" 
-                                                @checked(in_array($place, (array)(@$requirements->facebook_placement ?? [])))>
-                                        </div>
-                                        <label class="title" for="facebook_placement_{{ $place }}">@lang(ucfirst($place))</label>
-                                    </div>
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="facebook_type_video"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="facebook_type_video" name="facebook_type[]" type="checkbox" value="video" @checked(in_array('video', old('facebook_type', @$campaign->content_requirements->facebook_type) ?? []))>
                                 </div>
-                            @endforeach
+                                <span class="title">@lang('Video')</span>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="common-style border-0 p-0">
-                        <label class="form--label">
-                            {{ $isInfluencer ? __('Proposed Facebook Post Count') : __('Required Facebook Post Count') }}
-                        </label>
-                        <div class="input-group product-qty mb-3">
-                            <span class="input-group-text product-qty__decrement"><i class="fas fa-minus"></i></span>
-                            <input class="form-control product-qty__value" name="facebook_post_count" type="number" value="{{ @$requirements->facebook_post_count ?? 1 }}" required min="1">
-                            <span class="input-group-text product-qty__increment"><i class="las la-plus"></i></span>
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="facebook_type_text"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="facebook_type_text" name="facebook_type[]" type="checkbox" value="text" @checked(in_array('text', old('facebook_type', @$campaign->content_requirements->facebook_type) ?? []))>
+                                </div>
+                                <span class="title">@lang('Text')</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            @endif
-
-            {{-- Instagram Section --}}
-            @if ($hasInstagram)
-                <div class="platform__box">
-                    <div class="social-media">
-                        <h6 class="d-flex gap-2">
-                            <i class="fab fa-instagram text--instagram"></i>
-                            <span>@lang('Instagram')</span>
-                        </h6>
+                <div class="form-group common-style mb-4">
+                    <div class="create-header mb-4">
+                        <label class="form--label mb-0">@lang('Content Placement ?') <span
+                                  class="text--danger">*</span></label>
+                        <p class="campaign-desc">@lang('Select the content place where the influencer will post content to promote your brand')</p>
                     </div>
-                    
-                    <div class="form-group common-style mb-4">
-                        <div class="create-header mb-4">
-                            <label class="form--label mb-0">@lang('Content Type ?')</label>
-                        </div>
-                        <div class="d-flex flex-wrap gap-3">
-                            @foreach(['photo', 'video', 'text'] as $type)
-                                <div class="custom--check">
-                                    <div class="d-flex gap-2">
-                                        <div class="form--check d-inline-block">
-                                            <input class="form-check-input" id="instagram_type_{{ $type }}" name="instagram_type[]" type="checkbox" value="{{ $type }}" 
-                                                @checked(in_array($type, (array)(@$requirements->instagram_type ?? [])))>
-                                        </div>
-                                        <label class="title" for="instagram_type_{{ $type }}">@lang(ucfirst($type))</label>
-                                    </div>
+
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="facebook_placement_post"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="facebook_placement_post" name="facebook_placement[]" type="checkbox" value="post" @checked(in_array('post', old('facebook_placement', @$campaign->content_requirements->facebook_placement) ?? []))>
                                 </div>
-                            @endforeach
+                                <span class="title">@lang('Post')</span>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="common-style border-0 p-0">
-                        <label class="form--label">
-                            {{ $isInfluencer ? __('Proposed Instagram Post Count') : __('Required Instagram Post Count') }}
-                        </label>
-                        <div class="input-group product-qty mb-3">
-                            <span class="input-group-text product-qty__decrement"><i class="fas fa-minus"></i></span>
-                            <input class="form-control product-qty__value" name="instagram_post_count" type="number" value="{{ @$requirements->instagram_post_count ?? 1 }}" required min="1">
-                            <span class="input-group-text product-qty__increment"><i class="las la-plus"></i></span>
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="facebook_placement_story"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="facebook_placement_story" name="facebook_placement[]" type="checkbox" value="story" @checked(in_array('story', old('facebook_placement', @$campaign->content_requirements->facebook_placement) ?? []))>
+                                </div>
+                                <span class="title">@lang('Story')</span>
+                            </div>
+                        </div>
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="facebook_placement_reels"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="facebook_placement_reels" name="facebook_placement[]" type="checkbox" value="reels" @checked(in_array('reels', old('facebook_placement', @$campaign->content_requirements->facebook_placement) ?? []))>
+                                </div>
+                                <span class="title">@lang('Reels')</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            @endif
-
-            {{-- TikTok Section --}}
-            @if ($hasTikTok)
-                <div class="platform__box">
-                    <div class="social-media">
-                        <h6 class="d-flex gap-2">
-                            <i class="fab fa-tiktok text--tiktok"></i>
-                            <span> @lang('TikTok')</span>
-                        </h6>
-                    </div>
-                    <div class="form-group common-style mb-4">
-                        <div class="create-header mb-4">
-                            <label class="form--label mb-0">@lang('Content Type ?') <span class="text--danger">*</span></label>
-                            <p class="campaign-desc">
-                                @if($isInfluencer)
-                                    @lang('What type of content will you create for TikTok?')
-                                @else
-                                    @lang('Select the types of TikTok content you want.')
-                                @endif
-                            </p>
-                        </div>
-                        <div class="d-flex flex-wrap gap-3">
-                            @foreach(['video'] as $type)
-                                <div class="custom--check">
-                                    <div class="d-flex gap-2">
-                                        <div class="form--check d-inline-block">
-                                            <input class="form-check-input" id="tiktok_type_{{ $type }}" name="tiktok_type[]" type="checkbox" value="{{ $type }}"
-                                                @checked(in_array($type, (array)(@$requirements->tiktok_type ?? ['video'])))>
-                                        </div>
-                                        <label class="title" for="tiktok_type_{{ $type }}">@lang(ucfirst($type))</label>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                    <div class="form-group common-style mb-4">
-                        <div class="create-header mb-4">
-                            <label class="form--label mb-0">@lang('Content Placement ?') <span class="text--danger">*</span></label>
-                        </div>
-                        <div class="d-flex flex-wrap gap-3">
-                            @foreach(['post', 'story'] as $place)
-                                <div class="custom--check">
-                                    <div class="d-flex gap-2">
-                                        <div class="form--check d-inline-block">
-                                            <input class="form-check-input" id="tiktok_placement_{{ $place }}" name="tiktok_placement[]" type="checkbox" value="{{ $place }}"
-                                                @checked(in_array($place, (array)(@$requirements->tiktok_placement ?? [])))>
-                                        </div>
-                                        <label class="title" for="tiktok_placement_{{ $place }}">@lang(ucfirst($place))</label>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                    <div class="common-style border-0 p-0">
-                        <label class="form--label">@lang('TikTok Video Count')</label>
-                        <div class="input-group product-qty mb-3">
-                            <span class="input-group-text product-qty__decrement"><i class="fas fa-minus"></i></span>
-                            <input class="form-control product-qty__value" name="tiktok_video_count" type="number" value="{{ @$requirements->tiktok_video_count ?? 1 }}" required min="1">
-                            <span class="input-group-text product-qty__increment"><i class="las la-plus"></i></span>
-                        </div>
-                    </div>
-                </div>
-            @endif
-
-            {{-- YouTube Section --}}
-            @if ($hasYouTube)
-                <div class="platform__box">
-                    <div class="social-media">
-                        <h6 class="d-flex gap-2">
-                            <i class="fab fa-youtube text--youtube"></i>
-                            <span> @lang('YouTube')</span>
-                        </h6>
-                    </div>
-                    <div class="form-group common-style mb-4">
-                        <div class="create-header mb-4">
-                            <label class="form--label mb-0">@lang('Content Type ?') <span class="text--danger">*</span></label>
-                            <p class="campaign-desc">
-                                @if($isInfluencer)
-                                    @lang('What type of content will you create for YouTube?')
-                                @else
-                                    @lang('Select the types of YouTube content you want.')
-                                @endif
-                            </p>
-                        </div>
-                        <div class="d-flex flex-wrap gap-3">
-                            @foreach(['video'] as $type)
-                                <div class="custom--check">
-                                    <div class="d-flex gap-2">
-                                        <div class="form--check d-inline-block">
-                                            <input class="form-check-input" id="youtube_type_{{ $type }}" name="youtube_type[]" type="checkbox" value="{{ $type }}" 
-                                                @checked(in_array($type, (array)(@$requirements->youtube_type ?? ['video'])))>
-                                        </div>
-                                        <label class="title" for="youtube_type_{{ $type }}">@lang(ucfirst($type))</label>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                    <div class="form-group common-style mb-4">
-                        <div class="create-header mb-4">
-                            <label class="form--label mb-0">@lang('Content Placement ?') <span class="text--danger">*</span></label>
-                        </div>
-                        <div class="d-flex flex-wrap gap-3">
-                            @foreach(['full_video', 'short', 'mention'] as $place)
-                                <div class="custom--check">
-                                    <div class="d-flex gap-2">
-                                        <div class="form--check d-inline-block">
-                                            <input class="form-check-input" id="youtube_placement_{{ $place }}" name="youtube_placement[]" type="checkbox" value="{{ $place }}" 
-                                                @checked(in_array($place, (array)(@$requirements->youtube_placement ?? [])))>
-                                        </div>
-                                        <label class="title" for="youtube_placement_{{ $place }}">@lang(str_replace('_', ' ', ucfirst($place)))</label>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                    <div class="common-style border-0 p-0">
-                        <label class="form--label">@lang('YouTube Video Count')</label>
-                        <div class="input-group product-qty mb-3">
-                            <span class="input-group-text product-qty__decrement"><i class="fas fa-minus"></i></span>
-                            <input class="form-control product-qty__value" name="youtube_video_count" type="number" value="{{ @$requirements->youtube_video_count ?? 1 }}" required min="1">
-                            <span class="input-group-text product-qty__increment"><i class="las la-plus"></i></span>
-                        </div>
-                    </div>
-                </div>
-            @endif
-
-            {{-- Video Length (Conditional Area) --}}
-            <div class="video-length-area d-none platform__box">
                 <div class="common-style border-0 p-0">
-                    <div class="create-header mb-3">
-                        <label class="form--label mb-0">@lang('Video Length') <span class="text--danger">*</span></label>
+                    <div class="create-header mb-4">
+                        <label class="form--label mb-0">@lang('Required number of posts or stories or reels on Facebook') <span class="text--danger">*</span></label>
                     </div>
-                    <div class="input-group">
-                        <input class="form-control form--control" name="video_length" type="number" value="{{ @$requirements->video_length }}">
-                        <span class="input-group-text">@lang('minutes')</span>
+                    <div class="input-group product-qty mb-3">
+                        <span class="input-group-text product-qty__decrement"><i class="fas fa-minus"></i></span>
+                        <input class="form-control product-qty__value" name="facebook_post_count" type="number" value="{{ old('facebook_post_count', @$campaign->content_requirements->facebook_post_count ?? 1) }}" required>
+                        <span class="input-group-text product-qty__increment"><i class="las la-plus"></i></span>
+                    </div>
+                </div>
+            </div>
+        @endif
+        @if (in_array(2, @$campaign->platformId ?? []))
+            <div class="platform__box">
+                <div class="social-media">
+                    <h6 class="d-flex gap-2">
+                        <i class="fab fa-instagram"></i>
+                        <span>@lang('Instagram')</span>
+                    </h6>
+                </div>
+                <div class="form-group common-style mb-4">
+                    <div class="create-header mb-4">
+                        <label class="form--label mb-0">@lang('Content Type ?') <span
+                                  class="text--danger">*</span></label>
+                        <p class="campaign-desc">@lang('Select the ways in which your brand will be promoted on Instagram.')</p>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="instagram_type_photo"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="instagram_type_photo" name="instagram_type[]" type="checkbox" value="photo" @checked(in_array('photo', old('instagram_type', @$campaign->content_requirements->instagram_type) ?? []))>
+                                </div>
+                                <span class="title">@lang('Photo')</span>
+                            </div>
+                        </div>
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="instagram_type_video"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="instagram_type_video" name="instagram_type[]" type="checkbox" value="video" @checked(in_array('video', old('instagram_type', @$campaign->content_requirements->instagram_type) ?? []))>
+                                </div>
+                                <span class="title">@lang('Video')</span>
+                            </div>
+                        </div>
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="instagram_type_text"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="instagram_type_text" name="instagram_type[]" type="checkbox" value="text" @checked(in_array('text', old('instagram_type', @$campaign->content_requirements->instagram_type) ?? []))>
+                                </div>
+                                <span class="title">@lang('Text')</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group common-style mb-4">
+                    <div class="create-header mb-4">
+                        <label class="form--label mb-0">@lang('Content Placement ?') <span
+                                  class="text--danger">*</span></label>
+                        <p class="campaign-desc">@lang('Select the content place where the influencer will post content to promote your brand')</p>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="instagram_placement_post"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="instagram_placement_post" name="instagram_placement[]" type="checkbox" value="post" @checked(in_array('post', old('instagram_placement', @$campaign->content_requirements->instagram_placement) ?? []))>
+                                </div>
+                                <span class="title">@lang('Post')</span>
+                            </div>
+                        </div>
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="instagram_placement_story"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="instagram_placement_story" name="instagram_placement[]" type="checkbox" value="story" @checked(in_array('story', old('instagram_placement', @$campaign->content_requirements->instagram_placement) ?? []))>
+                                </div>
+                                <span class="title">@lang('Story')</span>
+                            </div>
+                        </div>
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="instagram_placement_reels"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="instagram_placement_reels" name="instagram_placement[]" type="checkbox" value="reels" @checked(in_array('reels', old('instagram_placement', @$campaign->content_requirements->instagram_placement) ?? []))>
+                                </div>
+                                <span class="title">@lang('Reels')</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="common-style border-0 p-0">
+                    <div class="create-header mb-4">
+                        <label class="form--label mb-0">@lang('Required number of posts or stories or reels on Instagram') <span class="text--danger">*</span></label>
+                    </div>
+                    <div class="input-group product-qty mb-3">
+                        <span class="input-group-text product-qty__decrement"><i class="fas fa-minus"></i></span>
+                        <input class="form-control product-qty__value" name="instagram_post_count" type="number" value="{{ old('instagram_post_count', @$campaign->content_requirements->instagram_post_count ?? 1) }}" required>
+                        <span class="input-group-text product-qty__increment"><i class="las la-plus"></i></span>
+                    </div>
+                </div>
+            </div>
+        @endif
+        @if (in_array(3, @$campaign->platformId ?? []))
+            <div class="platform__box">
+                <div class="social-media">
+                    <h6 class="d-flex gap-2">
+                        <i class="fab fa-youtube"></i>
+                        <span>@lang('Youtube')</span>
+                    </h6>
+                </div>
+                <div class="form-group common-style mb-4">
+                    <div class="create-header mb-4">
+                        <label class="form--label mb-0">@lang('Content Type ?') <span
+                                  class="text--danger">*</span></label>
+                        <p class="campaign-desc">@lang('Select the ways in which your brand will be promoted on Facebook.')</p>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="youtube_type_video"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="youtube_type_video" name="youtube_placement[]" type="checkbox" value="video" @checked(in_array('video', old('youtube_placement', @$campaign->content_requirements->youtube_placement) ?? []))>
+                                </div>
+                                <span class="title">@lang('Video')</span>
+                            </div>
+                        </div>
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="youtube_type_short_video"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="youtube_type_short_video" name="youtube_placement[]" type="checkbox" value="short_video" @checked(in_array('short_video', old('youtube_placement', @$campaign->content_requirements->youtube_placement) ?? []))>
+                                </div>
+                                <span class="title">@lang('Short Video')</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="common-style border-0 p-0">
+                    <div class="create-header mb-4">
+                        <label class="form--label mb-0">@lang('Required number of video on Youtube') <span class="text--danger">*</span></label>
+                    </div>
+                    <div class="input-group product-qty mb-3">
+                        <span class="input-group-text product-qty__decrement"><i class="fas fa-minus"></i></span>
+                        <input class="form-control product-qty__value" name="youtube_video_count" type="number" value="{{ old('youtube_video_count', @$campaign->content_requirements->youtube_video_count ?? 1) }}" required>
+                        <span class="input-group-text product-qty__increment"><i class="las la-plus"></i></span>
+                    </div>
+                </div>
+            </div>
+        @endif
+        @if (in_array(4, @$campaign->platformId ?? []))
+            <div class="platform__box">
+                <div class="social-media">
+                    <h6 class="d-flex gap-2">
+                        <i class="fab fa-tiktok"></i>
+                        <span>@lang('TikTok')</span>
+                    </h6>
+                </div>
+                <div class="form-group common-style mb-4">
+                    <div class="create-header mb-4">
+                        <label class="form--label mb-0">@lang('Content Type ?') <span
+                                  class="text--danger">*</span></label>
+                        <p class="campaign-desc">@lang('Select the ways in which your brand will be promoted on TikTok.')</p>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="tiktok_type_video"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="tiktok_type_video" name="tiktok_type[]" type="checkbox" value="video" @checked(in_array('video', old('tiktok_type', @$campaign->content_requirements->tiktok_type) ?? []))>
+                                </div>
+                                <span class="title">@lang('Video')</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group common-style mb-4">
+                    <div class="create-header mb-4">
+                        <label class="form--label mb-0">@lang('Content Placement ?') <span
+                                  class="text--danger">*</span></label>
+                        <p class="campaign-desc">@lang('Select the content place where the influencer will post content to promote your brand')</p>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="custom--check">
+                            <label class="custom--check-label" for="tiktok_placement_video"></label>
+                            <div class="d-flex gap-2">
+                                <div class="form--check d-inline-block">
+                                    <input class="form-check-input" id="tiktok_placement_video" name="tiktok_placement[]" type="checkbox" value="video" @checked(in_array('video', old('tiktok_placement', @$campaign->content_requirements->tiktok_placement) ?? []))>
+                                </div>
+                                <span class="title">@lang('Video')</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="common-style border-0 p-0">
+                    <div class="create-header mb-4">
+                        <label class="form--label mb-0">@lang('Required number of video on TikTok') <span class="text--danger">*</span></label>
+                    </div>
+                    <div class="input-group product-qty mb-3">
+                        <span class="input-group-text product-qty__decrement"><i class="fas fa-minus"></i></span>
+                        <input class="form-control product-qty__value" name="tiktok_video_count" type="number" value="{{ old('tiktok_video_count', @$campaign->content_requirements->tiktok_video_count ?? 1) }}" required>
+                        <span class="input-group-text product-qty__increment"><i class="las la-plus"></i></span>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        <div class="video-length-area d-none platform__box">
+            <div class="common-style border-0 p-0">
+                <div class="create-header mb-3">
+                    <label class="form--label mb-0">@lang('Video Length') <span class="text--danger">*</span></label>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <input class="form-control form--control" name="video_length" type="number" value="{{ old('video_length', @$campaign->content_requirements->video_length) }}">
+                            <span class="input-group-text">@lang('minutes')</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+    <div class="d-flex justify-content-between mt-4 text-end">
+        <button class="btn btn--gray preContentBtn" type="button"> <i class="las la-arrow-left"></i> @lang('Previous')</button>
+        <button class="btn btn--base" type="submit"> @lang('Next') <i class="las la-arrow-right"></i></button>
+    </div>
+</form>
 
-        <div class="d-flex justify-content-between mt-4">
-            <button class="btn btn--gray preContentBtn" type="button" data-pre="basic"> 
-                <i class="las la-arrow-left"></i> @lang('Previous')
-            </button>
-            <button class="btn btn--base" type="submit"> 
-                @lang('Next') <i class="las la-arrow-right"></i>
-            </button>
-        </div>
-    </form>
-</div>
-
-<script>
-    (function($){
+@push('script')
+    <script>
         "use strict";
-        
-        // Define the video checkboxes
         var checkboxes = [
             '#facebook_type_video',
             '#instagram_type_video',
-            '[id^="tiktok_type_"]',
-            '[id^="youtube_type_"]'
+            '#youtube_type_video',
+            '#youtube_type_short_video',
+                        '#tiktok_type_video'
         ];
 
         function toggleVideoLengthArea() {
-            var isChecked = checkboxes.some(selector => $(selector).is(":checked"));
-            if (isChecked) {
-                $(".video-length-area").removeClass("d-none");
+            var videoLengthArea = $(".video-length-area");
+            var isAnyCheckboxChecked = checkboxes.map(function(checkbox) {
+                return $(checkbox).is(":checked");
+            });
+
+            if (isAnyCheckboxChecked.includes(true)) {
+                videoLengthArea.removeClass("d-none");
             } else {
-                $(".video-length-area").addClass("d-none");
+                videoLengthArea.addClass("d-none");
             }
         }
-
-        // Attach event listener using delegation to ensure it works with AJAX loaded HTML
-        $(document).on("change", checkboxes.join(", "), toggleVideoLengthArea);
-        
-        // Run once on load
+        $(document).on("change", checkboxes.join(", "), toggleVideoLengthArea)
         toggleVideoLengthArea();
-        
-        // Re-initialize UI helpers
-        if(typeof productCount === 'function') productCount();
-        
-    })(jQuery);
-</script>
+    </script>
+@endpush
+
+
+
+

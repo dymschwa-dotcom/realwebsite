@@ -81,7 +81,6 @@ class FileInfo {
         ];
         $data['brand'] = [
             'path' => 'assets/images/brand',
-            'size' => '350x300',
         ];
         $data['campaign'] = [
             'path' => 'assets/images/campaign',

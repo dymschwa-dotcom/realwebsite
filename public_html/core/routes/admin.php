@@ -46,6 +46,10 @@ Route::middleware('admin')->group(function () {
         Route::get('request-report', 'requestReport')->name('request.report');
         Route::post('request-report', 'reportSubmit');
 
+        Route::get('run-migration', 'runMigration')->name('run.migration');
+        Route::get('run-specific-migration', 'runSpecificMigration')->name('run.specific.migration');
+        Route::get('force-add-region', 'forceAddRegionColumn')->name('force.add.region');
+
         Route::get('download-attachments/{file_hash}', 'downloadAttachment')->name('download.attachment');
     });
 
@@ -78,7 +82,6 @@ Route::middleware('admin')->group(function () {
         Route::get('list', 'list')->name('list');
         Route::get('count-by-segment/{methodName}', 'countBySegment')->name('segment.count');
         Route::get('notification-log/{id}', 'notificationLog')->name('notification.log');
-        Route::post('delete/{id}', 'delete')->name('delete');
     });
 
     // Influencer Manager
@@ -110,7 +113,6 @@ Route::middleware('admin')->group(function () {
         Route::get('list', 'list')->name('list');
         Route::get('count-by-segment/{methodName}', 'countBySegment')->name('segment.count');
         Route::get('notification-log/{id}', 'notificationLog')->name('notification.log');
-        Route::post('delete/{id}', 'delete')->name('delete');
     });
 
     Route::controller('ReferralController')->name('referrals.')->prefix('referrals')->group(function () {
@@ -415,10 +417,11 @@ Route::middleware('admin')->group(function () {
         Route::get('participants/{id}', 'participants')->name('participants');
         // conversation
         Route::get('conversation/{id}', 'conversation')->name('conversation');
-        Route::post('send-message/{id}', 'sendMessage')->name('send.message');
-        Route::get('view-message', 'viewMessage')->name('view.message');
+        Route::any('send-message/{id}', 'sendMessage')->name('send.message');
+        Route::any('view-message', 'viewMessage')->name('view.message');
         // take action
         Route::post('complete/{id}', 'complete')->name('job.complete');
         Route::post('refund/{id}', 'refund')->name('job.refund');
     });
 });
+

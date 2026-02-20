@@ -41,6 +41,7 @@
     <a class="scroll-top"><i class="fas fa-angle-double-up"></i></a>
 
     @yield('panel')
+    @stack('modal')
 
     <script src="{{ asset('assets/global/js/jquery-3.7.1.min.js') }}"></script>
     <script src="{{ asset('assets/global/js/bootstrap.bundle.min.js') }}"></script>
@@ -102,3 +103,4 @@
 </body>
 
 </html>
+

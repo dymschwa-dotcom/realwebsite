@@ -506,17 +506,4 @@ class ManageUsersController extends Controller
         $logs = NotificationLog::where('user_id', $id)->with('user')->orderBy('id', 'desc')->paginate(getPaginate());
         return view('admin.reports.notification_history', compact('pageTitle', 'logs', 'user'));
     }
-
-    public function delete($id)
-    {
-        $user = User::findOrFail($id);
-
-        // Optional: If brands have uploaded files/images, you could delete them here
-        // before deleting the user record.
-        
-        $user->delete();
-
-        $notify[] = ['success', 'Brand account and all associated data deleted successfully'];
-        return back()->withNotify($notify);
-    }
 }

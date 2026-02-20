@@ -30,6 +30,13 @@ class SocialConnect {
                 'pages_show_list',
                 'business_management',
             ];
+        } else if ($this->provider == 'tiktok') {
+            $provider    = 'tiktok';
+            $permissions = [
+                'user.info.basic',
+                'user.info.stats',
+                'video.list',
+            ];
         } else {
             $provider    = 'google';
             $permissions = [
@@ -44,6 +51,9 @@ class SocialConnect {
         if ($this->provider == 'youtube') {
             $provider      = 'google';
             $configuration = gs()->socialite_credentials->youtube;
+        } else if ($this->provider == 'tiktok') {
+            $provider      = 'tiktok';
+            $configuration = gs()->socialite_credentials->tiktok;
         } else {
             $provider      = 'facebook';
             $configuration = gs()->socialite_credentials->$provider;
@@ -56,7 +66,7 @@ class SocialConnect {
     }
 
     public function login() {
-        $provider = $this->provider == 'youtube' ? 'google' : 'facebook';
+        $provider = $this->provider == 'youtube' ? 'google' : ($this->provider == 'tiktok' ? 'tiktok' : 'facebook');
         $user     = Socialite::driver($provider)->user();
         if ($this->provider == 'facebook') {
             $connect = $this->connectFacebook($user);
@@ -72,6 +82,13 @@ class SocialConnect {
                 return to_route('influencer.profile.setting')->withNotify($notify);
             }
             $notification = 'Instagram channel connected successfully';
+        } else if ($this->provider == 'tiktok') {
+            $connect = $this->connectTiktok($user);
+            if ($connect['error']) {
+                $notify[] = ['error', $connect['message']];
+                return to_route('influencer.profile.setting')->withNotify($notify);
+            }
+            $notification = 'TikTok channel connected successfully';
         } else {
             $connect = $this->connectYoutube($user);
             if ($connect['error']) {
@@ -150,4 +167,22 @@ class SocialConnect {
 
         return ['error' => false];
     }
+
+    private function connectTiktok($user) {
+        // TikTok API integration requires specific implementation based on their Research API or Display API.
+        // For demonstration, we'll assume a similar pattern to other providers.
+        // Note: Real TikTok implementation requires handling their specific OAuth flow and data structure.
+
+        $social = SocialLink::notConnect()->where('influencer_id', authInfluencerId())->where('platform_id', 4)->first();
+        if (!$social) {
+            return ['error' => true, 'message' => 'TikTok channel not found'];
+        }
+
+        $social->channel_connect = Status::ENABLE;
+        $social->followers       = @$user->user['follower_count'] ?? 0;
+        $social->social_user_id  = @$user->id;
+        $social->save();
+        return ['error' => false];
+    }
 }
+

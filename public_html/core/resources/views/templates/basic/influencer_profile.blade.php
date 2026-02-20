@@ -1,355 +1,373 @@
 @extends($activeTemplate . 'layouts.frontend')
-
-{{-- Remove Breadcrumb --}}
-@section('breadcrumb')
-@endsection
-
 @section('content')
-{{-- 1. IN-LINE GALLERY --}}
-<div class="profile-cover-area pos-rel mt-4">
-    <div class="container">
-        <div class="position-relative gallery-container">
-            <div class="row g-2">
-                @php $mainPhotos = $influencer->galleries->take(3); @endphp
-                @foreach($mainPhotos as $photo)
-                    <div class="col-4">
-                        <div class="cover-item">
-                            <img src="{{ getImage(getFilePath('profileGallery') . '/' . $photo->image) }}" 
-                                 class="w-100 rounded-3 shadow-sm" 
-                                 style="height: 450px; object-fit: cover;">
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-
-            @if($influencer->galleries->count() > 3)
-                <button class="btn btn-light shadow-sm btn-sm show-all-photos-inline" data-bs-toggle="modal" data-bs-target="#galleryModal">
-                    <i class="las la-th text-dark"></i> @lang('Show all photos')
-                </button>
-            @endif
-        </div>
-    </div>
-</div>
-
-<div class="container mt-5 pb-80">
-    <div class="row gy-5">
-        {{-- LEFT COLUMN --}}
-        <div class="col-lg-7">
-            
-            {{-- PROFILE HEADER --}}
-            <div class="d-flex align-items-center gap-4 mb-5">
-                <div class="avatar-wrapper">
-                    <img src="{{ getImage(getFilePath('influencer') . '/' . $influencer->image, getFileSize('influencer')) }}" 
-                         class="rounded-circle border" 
-                         style="width: 140px; height: 140px; object-fit: cover; background: #fff;">
+    <section class="influencer-profile-section pt-5 pb-120 bg-white">
+        <div class="container">
+            {{-- Photo Gallery Grid with Action Icons --}}
+            <div class="profile-gallery-wrapper mb-5 position-relative">
+                <div class="action-icons-top">
+                    <button class="icon-btn favorite-btn @if(in_array($influencer->id, $favoriteInfluencer)) active @endif" data-id="{{ $influencer->id }}">
+                        <i class="las la-heart"></i>
+                    </button>
+                    <button class="icon-btn share-btn" onclick="copyProfileUrl()">
+                        <i class="las la-share-alt"></i>
+                    </button>
                 </div>
-                
-                <div class="header-info">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <h1 class="fw-bold m-0" style="font-size: 2.5rem; letter-spacing: -1px; color: #111;">
-                            {{ __($influencer->fullname) }}
-                        </h1>
-                        @if($influencer->kv == 1)
-                            <i class="fas fa-check-circle text-primary" style="font-size: 24px;" title="@lang('Verified')"></i>
-                        @endif
-                    </div>
-                    
-                    <div class="d-flex flex-wrap align-items-center gap-3 text-muted" style="font-size: 1.1rem;">
-                        <span class="text-dark fw-bold"><i class="las la-star text-warning"></i> {{ $influencer->rating ?? '0.0' }}</span>
-                        <span>&bull;</span>
-                        <span class="fw-bold text-dark">{{ $reviews->count() }} @lang('Reviews')</span>
-                        <span>&bull;</span>
-                        <span>{{ __($influencer->country_name) }}</span>
-                    </div>
-                </div>
-            </div>
 
-            {{-- SOCIAL CHANNELS --}}
-            <div class="social-channels d-flex flex-wrap gap-2 mb-4">
-                @foreach($influencer->socialLinks as $social)
-                    <div class="social-badge d-flex align-items-center gap-2 px-3 py-2 border rounded bg-white shadow-sm">
-                        <span class="text--danger">@php echo $social->platform->icon @endphp</span>
-                        <span class="fw-bold text-dark">{{ getFollowerCount($social->followers) }}</span>
-                        <small class="text-muted">@lang('Followers')</small>
-                    </div>
-                @endforeach
-            </div>
-
-            {{-- ABOUT --}}
-            <div class="about-section mb-5">
-                <h4 class="fw-bold mb-3 border-start border-dark border-4 ps-3">@lang('About')</h4>
-                <p style="font-size: 1.1rem; line-height: 1.7; color: #444;">{{ __($influencer->bio) }}</p>
-            </div>
-
-            {{-- TABS NAVIGATION --}}
-            <ul class="nav nav-pills custom--pills mb-4 border-bottom" id="pills-tab" role="tablist">
-                <li class="nav-item">
-                    <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#pills-packages">@lang('Packages')</button>
-                </li>
-                @if($influencer->engagement_rate || $influencer->avg_reach || $influencer->primary_gender)
-                <li class="nav-item">
-                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#pills-audience">@lang('Audience')</button>
-                </li>
-                @endif
-                <li class="nav-item">
-                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#pills-reviews">@lang('Reviews')</button>
-                </li>
-            </ul>
-
-            <div class="tab-content" id="pills-tabContent">
-                {{-- 1. PACKAGES --}}
-                <div class="tab-pane fade show active" id="pills-packages">
-                    <div class="package-menu-list">
-                        @forelse($influencer->services as $service)
-                            <div class="package-menu-item p-4 mb-3 border rounded-3 bg-white shadow-sm d-flex align-items-center justify-content-between pointer select-package" 
-                                 data-id="{{ $service->id }}"
-                                 data-title="{{ __($service->title) }}"
-                                 data-price="{{ $service->price }}">
-                                <div class="package-info">
-                                    <h5 class="fw-bold mb-1 text--danger">{{ __($service->title) }}</h5>
-                                    <p class="text-muted small mb-0">{{ Str::limit(__($service->description), 120) }}</p>
-                                </div>
-                                <div class="package-price text-end ps-4 d-flex align-items-center gap-3">
-                                    <h4 class="fw-bold text-dark m-0">{{ gs('cur_sym') }}{{ showAmount($service->price) }}</h4>
-                                    <div class="selection-indicator">
-                                        <i class="las la-circle fs-4 text-muted"></i>
-                                    </div>
-                                </div>
+                <div class="row g-2">
+                    @php
+                        $galleryImages = $influencer->galleries->take(3);
+                    @endphp
+                    @foreach($galleryImages as $gallery)
+                        <div class="col-md-4">
+                            <div class="gallery-item h-100 overflow-hidden rounded-4 shadow-sm">
+                                <img src="{{ getImage(getFilePath('profileGallery') . '/' . $gallery->image) }}" alt="gallery" class="w-100 h-100 object-fit-cover">
                             </div>
-                        @empty
-                            <p>@lang('No packages available.')</p>
-                        @endforelse
-                    </div>
-                </div>
-
-                {{-- 2. AUDIENCE (Updated Spacing) --}}
-                @if($influencer->engagement_rate || $influencer->avg_reach || $influencer->primary_gender)
-                <div class="tab-pane fade" id="pills-audience">
-                    {{-- FIXED: Added mb-5 for more bottom margin --}}
-                    <div class="audience-section mb-5 mt-2">
-                        <h4 class="fw-bold mb-4">@lang('Audience Insights')</h4>
-                        <div class="row g-4"> {{-- Changed g-3 to g-4 for more internal gutter spacing --}}
-                            @if($influencer->engagement_rate)
-                            <div class="col-sm-4">
-                                <div class="metric-card p-3 border-top border--danger border-3 rounded shadow-sm text-center bg-white">
-                                    <h5 class="text-muted small text-uppercase fw-bold">@lang('Engagement Rate')</h5>
-                                    <h3 class="fw-bold mb-0">{{ $influencer->engagement_rate }}</h3>
-                                </div>
-                            </div>
-                            @endif
-                            @if($influencer->avg_reach)
-                            <div class="col-sm-4">
-                                <div class="metric-card p-3 border rounded shadow-sm text-center bg-white">
-                                    <h5 class="text-muted small text-uppercase fw-bold">@lang('Avg. Reach')</h5>
-                                    <h3 class="fw-bold mb-0">{{ $influencer->avg_reach }}</h3>
-                                </div>
-                            </div>
-                            @endif
-                            @if($influencer->primary_gender)
-                            <div class="col-sm-4">
-                                <div class="metric-card p-3 border rounded shadow-sm text-center bg-white">
-                                    <h5 class="text-muted small text-uppercase fw-bold">@lang('Primary Gender')</h5>
-                                    <h3 class="fw-bold mb-0">{{ __($influencer->primary_gender) }}</h3>
-                                </div>
-                            </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-                @endif
-
-                {{-- 3. REVIEWS --}}
-                <div class="tab-pane fade" id="pills-reviews">
-                    <div class="reviews-wrapper mt-4">
-                        @include($activeTemplate . 'partials.reviews')
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- RIGHT COLUMN --}}
-        <div class="col-lg-5 ps-lg-5">
-            <div class="sticky-sidebar">
-                <div class="card border-0 shadow-lg p-4 rounded-4 bg-white text-center border-top border--danger border-5">
-                    
-                    <div id="selection-placeholder">
-                        <h4 class="fw-bold mb-3">@lang('Build Your Campaign')</h4>
-                        <p class="text-muted mb-4">@lang('Select one or more packages from the list to start your order.')</p>
-                    </div>
-
-                    <div id="selected-packages-container" style="display: none;" class="mb-4">
-                        <div id="package-list" class="text-start mb-3"></div>
-                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
-                            <h5 class="fw-bold">@lang('Total')</h5>
-                            <h4 class="fw-bold text--danger" id="total-price-display"></h4>
-                        </div>
-                    </div>
-
-                    <form action="{{ route('user.campaign.create') }}" method="GET">
-                        <input type="hidden" name="influencer" value="{{ $influencer->username }}">
-                        <input type="hidden" name="packages" id="selected-package-ids" value="">
-                        
-                        <button type="submit" id="order-btn" class="btn btn--danger w-100 btn-lg rounded-pill py-3 fw-bold mb-0" disabled>
-                            @lang('Order Now')
-                        </button>
-                    </form>
-
-                    <div class="or-separator my-3 d-flex align-items-center justify-content-center">
-                        <span class="px-2 text-muted small text-uppercase">@lang('or')</span>
-                    </div>
-
-                    <div class="custom-negotiation">
-                        @auth
-                            <a href="{{ route('user.conversation.start', $influencer->id) }}" class="text-dark fw-bold text-decoration-underline small">
-                                @lang('Negotiate a custom package')
-                            </a>
-                        @else
-                            <a href="{{ route('user.login') }}" class="text-dark fw-bold text-decoration-underline small">
-                                @lang('Negotiate a custom package')
-                            </a>
-                        @endauth
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- GALLERY MODAL --}}
-<div class="modal fade" id="galleryModal" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow-lg">
-            <div class="modal-header border-0 px-4 pt-4">
-                <h4 class="fw-bold m-0">@lang('Portfolio Gallery')</h4>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4 overflow-auto" style="max-height: 85vh;">
-                <div class="masonry-grid">
-                    @foreach($influencer->galleries as $gallery)
-                        <div class="masonry-item">
-                            <img src="{{ getImage(getFilePath('profileGallery') . '/' . $gallery->image) }}" class="w-100 rounded-3 shadow-sm">
                         </div>
                     @endforeach
                 </div>
+                @if($influencer->galleries->count() > 3)
+                <button class="btn btn-white btn-sm position-absolute bottom-0 end-0 m-4 shadow-sm rounded-pill px-4 py-2 fw-bold" data-bs-toggle="modal" data-bs-target="#galleryModal">
+                    <i class="las la-images me-1"></i> @lang('Show all photos')
+                </button>
+                @endif
+            </div>
+
+            <div class="row gy-5">
+                <div class="col-lg-7">
+                    <div class="influencer-header mb-5">
+                        <div class="d-flex align-items-center gap-4 mb-4">
+                            <img src="{{ getImage(getFilePath('influencer') . '/' . $influencer->image, getFileSize('influencer')) }}" alt="image" class="rounded-circle border" style="width: 100px; height: 100px; object-fit: cover;">
+                            <div>
+                                <h1 class="fw-bold h2 mb-1 text-dark">{{ $influencer->firstname }}</h1>
+                                <div class="d-flex flex-wrap align-items-center gap-3 text-secondary">
+                                    <div class="rating-display d-flex align-items-center bg-light px-2 py-1 rounded">
+                                            <i class="las la-star text--warning"></i>
+                                        <span class="ms-1 fw-bold text-dark small">{{ getAmount($influencer->rating) }} ({{ getAmount($influencer->total_review) ?? 0 }})</span>
+                                    </div>
+                                    <div class="location small fw-medium">
+                                        <i class="las la-map-marker fs-5"></i> {{ __(@$influencer->city) }}, {{ __(@$influencer->country_name) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="social-pills d-flex flex-wrap gap-2 mb-4">
+                            @foreach ($influencer->socialLink as $social)
+                                <div class="social-pill d-flex align-items-center gap-2 border rounded-pill px-3 py-1 bg-white shadow-sm">
+                                    <span class="fs-18">@php echo $social->platform->icon @endphp</span>
+                                    <span class="fw-bold small">{{ getFollowerCount($social->followers) }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <div class="about-block">
+                            <h4 class="fw-bold mb-3">@lang('About')</h4>
+                            <p class="text-muted lh-base" style="font-size: 1.1rem;">{{ __($influencer->bio) }}</p>
+                            
+                            @if (!blank($influencer->skills))
+                            <div class="mt-3">
+                                @foreach ($influencer->skills as $skill)
+                                    <span class="badge bg-light text-secondary border-0 me-1 mb-2 px-3 py-2 rounded-pill fw-normal">#{{ __($skill) }}</span>
+                                @endforeach
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Tabs Navigation --}}
+                    <ul class="nav nav-tabs border-0 gap-4 mb-4" id="profileTabs" role="tablist">
+                        @if($influencer->engagement && $influencer->avg_views && $influencer->primary_gender)
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold border-0 px-0 pb-2 bg-transparent text-dark border-bottom-2" id="audience-tab" data-bs-toggle="tab" data-bs-target="#audience" type="button" role="tab" aria-selected="true">@lang('Audience')</button>
+                        </li>
+                        @endif
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold border-0 px-0 pb-2 bg-transparent text-muted {{ !($influencer->engagement && $influencer->avg_views && $influencer->primary_gender) ? 'active text-dark border-bottom-2' : '' }}" id="packages-tab" data-bs-toggle="tab" data-bs-target="#packages" type="button" role="tab" aria-selected="false">@lang('Packages')</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold border-0 px-0 pb-2 bg-transparent text-muted" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews" type="button" role="tab" aria-selected="false">@lang('Reviews')</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content pt-2" id="profileTabsContent">
+                        {{-- Audience Tab --}}
+                        @if($influencer->engagement && $influencer->avg_views && $influencer->primary_gender)
+                        <div class="tab-pane fade show active" id="audience" role="tabpanel">
+                            <div class="row g-4">
+                                <div class="col-sm-4">
+                                    <div class="card border rounded-4 p-4 text-center bg-light shadow-none h-100">
+                                        <h6 class="text-muted mb-2 small text-uppercase fw-bold">@lang('Engagement')</h6>
+                                        <h3 class="fw-bold mb-0">{{ $influencer->engagement }}</h3>
+                                    </div>
+                                </div>
+                                <div class="col-sm-4">
+                                    <div class="card border rounded-4 p-4 text-center bg-light shadow-none h-100">
+                                        <h6 class="text-muted mb-2 small text-uppercase fw-bold">@lang('Avg Views')</h6>
+                                        <h3 class="fw-bold mb-0">{{ $influencer->avg_views }}</h3>
+                                    </div>
+                                </div>
+                                <div class="col-sm-4">
+                                    <div class="card border rounded-4 p-4 text-center bg-light shadow-none h-100">
+                                        <h6 class="text-muted mb-2 small text-uppercase fw-bold">@lang('Primary Gender')</h6>
+                                        <h3 class="fw-bold mb-0">{{ $influencer->primary_gender }}</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+
+                        {{-- Packages Tab --}}
+                        <div class="tab-pane fade {{ !($influencer->engagement && $influencer->avg_views && $influencer->primary_gender) ? 'show active' : '' }}" id="packages" role="tabpanel">
+                            <div class="d-flex flex-column gap-3">
+                                @foreach ($influencer->packages ?? [] as $package)
+                                <div class="package-item border rounded-4 p-4 shadow-sm bg-white hover-shadow transition cursor-pointer"
+                                     onclick="selectPackage(this)"
+                                     data-id="{{ $package->id }}"
+                                     data-name="{{ __($package->name) }}"
+                                     data-price="{{ showAmount($package->price) }}">
+                                    <div class="row align-items-center">
+                                        <div class="col-1">
+                                            <input type="radio" name="package_select" class="form-check-input" style="transform: scale(1.2);">
+                                        </div>
+                                        <div class="col-sm-7">
+                                            <h5 class="fw-bold mb-2">{{ __($package->name) }}</h5>
+                                            <p class="text-muted small mb-0">{{ __($package->description) }}</p>
+                                        </div>
+                                        <div class="col-sm-4 text-sm-end mt-3 mt-sm-0">
+                                            <span class="h4 fw-bold mb-2">{{ showAmount($package->price) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+                        {{-- Reviews Tab --}}
+                        <div class="tab-pane fade" id="reviews" role="tabpanel">
+                            @forelse ($reviews as $review)
+                                <div class="review-card border-bottom pb-4 mb-4 last-child-no-border">
+                                    <div class="d-flex gap-3 align-items-start">
+                                        <img src="{{ getImage(getFilePath('userProfile') . '/' . $review->user->image, getFileSize('userProfile')) }}" alt="user" class="rounded-circle border" style="width: 48px; height: 48px; object-fit: cover;">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <h6 class="fw-bold mb-0 text-dark">{{ $review->user->fullname }}</h6>
+                                                <span class="text-muted small">@php echo showRatings($review->rating) @endphp</span>
+                                            </div>
+                                            <p class="text-muted mb-0 small">{{ __($review->review) }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            @empty
+                                <p class="text-muted small">@lang('No reviews yet')</p>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+
+                {{-- STICKY WIDGET AREA --}}
+                <div class="col-lg-5 col-xl-4 offset-xl-1">
+                    <div class="sticky-sidebar">
+                        <div class="card border-0 rounded-4 shadow-lg p-4 mb-4 bg-white">
+                            <h4 class="fw-bold mb-4">@lang('Hire') {{ $influencer->firstname }}</h4>
+
+                            <div id="selection-summary" class="mb-4 d-none border-bottom pb-4">
+                                <div class="p-3 bg-light rounded-3 mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="small text-muted">@lang('Package'):</span>
+                                        <span class="fw-bold small text-truncate ms-2" id="selected-name"></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="small text-muted">@lang('Total'):</span>
+                                        <span class="h5 fw-bold mb-0 text-dark" id="selected-price"></span>
+                                    </div>
+                                </div>
+                                @auth
+                                    <form id="buy-form" action="" method="POST">
+                                        @csrf
+                                        <button type="submit" class="btn btn-dark w-100 rounded-pill py-3 fw-bold fs-6">@lang('Buy Now')</button>
+                                    </form>
+                                @else
+                                    <a href="{{ route('user.login') }}" class="btn btn-dark w-100 rounded-pill py-3 fw-bold fs-6">@lang('Login to Order')</a>
+                                @endauth
+                            </div>
+
+                            <div class="d-grid gap-3">
+                                @auth
+                                <a href="{{ route('user.participant.create.inquiry', $influencer->id) }}" class="btn btn-dark rounded-pill py-3 fw-bold fs-6 text-white">
+                                 @lang('Message Now')
+                                </a>
+                                @else
+                                 <a href="{{ route('user.login') }}" class="btn btn-dark rounded-pill py-3 fw-bold fs-6 text-white">
+                                @lang('Message Now')
+                                </a>
+                                @endauth
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- Fullscreen Gallery Modal --}}
+    <div class="modal fade" id="galleryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold ms-3 mt-2">@lang('Portfolio')</h5>
+                    <button type="button" class="btn-close m-2" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        @foreach($influencer->galleries as $gallery)
+                            <div class="col-md-4 col-sm-6">
+                                <div class="gallery-modal-item rounded-3 overflow-hidden shadow-sm h-100">
+                                    <img src="{{ getImage(getFilePath('profileGallery') . '/' . $gallery->image) }}" alt="gallery" class="w-100 h-100 object-fit-cover" style="min-height: 250px;">
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</div>
 @endsection
-
-@push('style')
-<style>
-    .breadcrumb-section, .inner-hero { display: none !important; }
-
-    .gallery-container { position: relative; }
-    .show-all-photos-inline {
-        position: absolute;
-        bottom: 20px;
-        right: 20px;
-        background: #ffffff !important;
-        color: #000000 !important;
-        border: 1px solid #ddd !important;
-        font-weight: 600;
-        z-index: 10;
-        padding: 8px 16px;
-        border-radius: 8px;
-    }
-
-    .custom--pills .nav-link {
-        color: #666;
-        font-weight: 600;
-        background: transparent;
-        border-radius: 0;
-        padding: 10px 20px;
-        border-bottom: 2px solid transparent;
-    }
-    .custom--pills .nav-link.active {
-        color: #000 !important;
-        background: transparent !important;
-        border-bottom: 2px solid #000 !important;
-    }
-
-    .package-menu-item { transition: all 0.3s ease; border: 1px solid #eee !important; }
-    .package-menu-item:hover { border-color: #ff3366 !important; }
-    .package-menu-item.active-selection { 
-        border: 2px solid #ff3366 !important; 
-        background-color: #fffafa !important;
-    }
-
-    .border--danger { border-color: #ff3366 !important; }
-    .text--danger { color: #ff3366 !important; }
-    .btn--danger { background-color: #ff3366 !important; color: white !important; border: none; }
-    .btn--danger:disabled { background-color: #ccc !important; cursor: not-allowed; }
-
-    .masonry-grid { column-count: 3; column-gap: 15px; }
-    .masonry-item { display: inline-block; width: 100%; margin-bottom: 15px; }
-
-    .or-separator::before, .or-separator::after {
-        content: "";
-        flex: 1;
-        border-bottom: 1px solid #eee;
-    }
-
-    @media (max-width: 991px) { .masonry-grid { column-count: 2; } }
-    @media (max-width: 575px) { .masonry-grid { column-count: 1; } }
-</style>
-@endpush
 
 @push('script')
 <script>
-    (function($) {
-        "use strict";
-        let selectedPackages = [];
-        const curSym = "{{ gs('cur_sym') }}";
+    function selectPackage(el) {
+        $('.package-item').removeClass('border-dark shadow-sm').addClass('border-light');
+        $(el).addClass('border-dark shadow-sm').removeClass('border-light');
+        $(el).find('input[type="radio"]').prop('checked', true);
 
-        $('.select-package').on('click', function() {
-            const id = $(this).data('id');
-            const title = $(this).data('title');
-            const price = parseFloat($(this).data('price'));
+        const name = $(el).data('name');
+        const price = $(el).data('price');
+        const id = $(el).data('id');
 
-            const index = selectedPackages.findIndex(p => p.id === id);
-            if (index > -1) {
-                selectedPackages.splice(index, 1);
-                $(this).removeClass('active-selection');
-                $(this).find('.selection-indicator i').removeClass('la-check-circle text--danger').addClass('la-circle text-muted');
-            } else {
-                selectedPackages.push({ id, title, price });
-                $(this).addClass('active-selection');
-                $(this).find('.selection-indicator i').removeClass('la-circle text-muted').addClass('la-check-circle text--danger');
-            }
-            updateSidebar();
-        });
+        $('#selected-name').text(name);
+        $('#selected-price').text(price);
+        $('#buy-form').attr('action', `{{ route('user.participant.buy.service', '') }}/${id}`);
+        $('#selection-summary').removeClass('d-none');
+    }
 
-        function updateSidebar() {
-            if (selectedPackages.length > 0) {
-                $('#selection-placeholder').hide();
-                $('#selected-packages-container').fadeIn();
-                
-                let listHtml = '';
-                let total = 0;
-                let ids = [];
+    function copyProfileUrl() {
+        navigator.clipboard.writeText(window.location.href);
+        // You can replace this alert with a toast notification
+        alert('Profile URL copied to clipboard!');
+    }
 
-                selectedPackages.forEach(p => {
-                    listHtml += `
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="small fw-bold text-dark"><i class="las la-check text--danger me-1"></i> ${p.title}</span>
-                            <span class="small text-muted">${curSym}${p.price.toFixed(2)}</span>
-                        </div>`;
-                    total += p.price;
-                    ids.push(p.id);
-                });
-
-                $('#package-list').html(listHtml);
-                $('#total-price-display').text(curSym + total.toFixed(2));
-                $('#selected-package-ids').val(ids.join(','));
-                $('#order-btn').prop('disabled', false);
-            } else {
-                $('#selected-packages-container').hide();
-                $('#selection-placeholder').fadeIn();
-                $('#order-btn').prop('disabled', true);
-                $('#selected-package-ids').val('');
-            }
-        }
-    })(jQuery);
+    $('.favorite-btn').on('click', function() {
+        @auth
+            const btn = $(this);
+            const id = btn.data('id');
+            $.post("{{ route('user.favorite.add') }}", {
+                influencer_id: id,
+                _token: "{{ csrf_token() }}"
+            }, function(response) {
+                if(response.success) {
+                    btn.toggleClass('active');
+                }
+            });
+        @else
+            window.location.href = "{{ route('user.login') }}";
+        @endauth
+    });
 </script>
+@endpush
+
+@push('style')
+<style>
+    body {
+        background-color: #fff !important;
+    }
+    .rounded-4 { border-radius: 1.25rem !important; }
+    .gallery-item img {
+        height: 400px !important;
+        transition: transform 0.3s ease;
+    }
+    .gallery-item:hover img {
+        transform: scale(1.05);
+    }
+    .btn-white {
+        background-color: #fff;
+        color: #000;
+        border: 1px solid #eee;
+    }
+    .btn-white:hover {
+        background-color: #f8f9fa;
+    }
+    .social-pill {
+        transition: all 0.2s ease;
+    }
+    .social-pill:hover {
+        transform: translateY(-2px);
+        background-color: #f8f9fa !important;
+    }
+    .hover-shadow:hover {
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.08)!important;
+    }
+    .transition {
+        transition: all 0.2s ease;
+    }
+    .last-child-no-border:last-child {
+        border-bottom: none !important;
+    }
+    
+    /* Sticky Sidebar Logic */
+    .sticky-sidebar {
+        position: sticky;
+        top: 40px;
+        z-index: 5;
+    }
+    
+    /* Action Icons Style */
+    .action-icons-top {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 10;
+        display: flex;
+        gap: 10px;
+    }
+    .icon-btn {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        color: #444;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    .icon-btn:hover {
+        transform: translateY(-3px);
+        background: #fff;
+    }
+    .favorite-btn.active {
+        color: #ff385c;
+    }
+    .favorite-btn.active i {
+        font-weight: 900;
+    }
+
+    .cursor-pointer { cursor: pointer; }
+    .btn-dark {
+        background-color: #000;
+        border: none;
+    }
+    .btn-dark:hover {
+        background-color: #222;
+    }
+    .lh-base { line-height: 1.6 !important; }
+
+    .nav-tabs .nav-link {
+        border-bottom: 2px solid transparent !important;
+    }
+    .nav-tabs .nav-link.active {
+        border-bottom-color: #000 !important;
+    }
+</style>
 @endpush

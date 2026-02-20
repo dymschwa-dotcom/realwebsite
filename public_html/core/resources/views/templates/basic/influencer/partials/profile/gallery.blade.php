@@ -1,6 +1,6 @@
 <div class="card custom--card mt-4">
     <div class="card-header">
-        <h6 class="mb-0">@lang('Profile Gallery')</h6>
+        <h6 class="mb-0">@lang('Portfolio Gallery')</h6>
     </div>
     <div class="card-body">
         @if (!blank($galleries))
@@ -31,7 +31,7 @@
             @csrf
             <div class="form-group">
                 <div class="input-images"></div>
-                <small class="text--warning"><i class="las la-exclamation-triangle"></i> @lang('Maximum ') {{ gs('max_image_upload') }} @lang('images can be uploaded') | @lang('File size will be ') {{ getFileSize('profileGallery') }} @lang('px')</small>
+                <small class="text--warning"><i class="las la-exclamation-triangle"></i> @lang('Maximum ') 12 @lang('images can be uploaded') | @lang('File size will be ') {{ getFileSize('profileGallery') }} @lang('px')</small>
             </div>
             <button class="btn btn--base w-100" type="submit">@lang('Submit')</button>
         </form>
@@ -68,7 +68,7 @@
                 preloaded: preloaded,
                 imagesInputName: 'images',
                 preloadedInputName: 'old',
-                maxFiles: "{{ gs('max_image_upload') }}"
+                maxFiles: 12
             });
 
             $(".image-popup").magnificPopup({
@@ -81,3 +81,4 @@
         })(jQuery)
     </script>
 @endpush
+

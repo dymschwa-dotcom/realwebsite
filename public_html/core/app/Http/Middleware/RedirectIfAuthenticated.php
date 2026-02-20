@@ -11,15 +11,10 @@ class RedirectIfAuthenticated
     {
 
         if (Auth::guard($guard)->check()) {
-            if ($guard == 'admin') {
-                return to_route('admin.dashboard');
-            } elseif ($guard == 'influencer') {
-                return to_route('influencer.home');
-            }
             return to_route('user.home');
         }
 
         return $next($request);
+
     }
 }
-

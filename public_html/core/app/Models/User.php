@@ -30,8 +30,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'kyc_data' => 'object',
-        'ver_code_send_at' => 'datetime',
-        'plan_expiry' => 'datetime',
+        'ver_code_send_at' => 'datetime'
     ];
 
 
@@ -64,7 +63,7 @@ class User extends Authenticatable
         return $this->hasMany(Campaign::class, 'user_id')->where('status', Status::CAMPAIGN_APPROVED);
     }
     
-    public function isUserOnline() {
+    public function isOnline() {
         return Cache::has('user_last_seen' . $this->id);
     }
 
@@ -134,3 +133,4 @@ class User extends Authenticatable
     }
 
 }
+

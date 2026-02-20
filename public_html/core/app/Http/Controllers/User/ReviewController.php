@@ -28,7 +28,7 @@ class ReviewController extends Controller {
     }
 
     public function add(Request $request, $participantId, $id = 0) {
-        $participant = Participant::completed()->authCampaign()->findOrFail($participantId);
+        $participant = Participant::authCampaign()->findOrFail($participantId);
         if ($participant->review && !$id) {
             $notify[] = ['error', 'Already reviewed this influencer'];
             return back()->withNotify($notify);
@@ -53,7 +53,7 @@ class ReviewController extends Controller {
         recentActivity(auth()->user()->username . ' has reviewed for your campaign job', 0, $influencer->id);
 
         $notify[] = ['success', 'Review added successfully'];
-        return to_route('user.review.index')->withNotify($notify);
+        return to_route('user.participant.detail', $participant->id)->withNotify($notify);
     }
 
     protected function insertReview($review, $data, $column) {
