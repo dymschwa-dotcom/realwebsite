@@ -6,4 +6,4 @@ db_data/
 Thumbs.db
 
 # Ignore environment files containing passwords
-.env
+.envpublic_html/install/database.sql
