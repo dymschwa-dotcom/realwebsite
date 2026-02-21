@@ -12,7 +12,6 @@ use App\Http\Middleware\MaintenanceMode;
 use App\Http\Middleware\RedirectIfAdmin;
 use App\Http\Middleware\RegistrationStep;
 use App\Http\Middleware\RedirectIfNotAdmin;
-use App\Http\Middleware\RedirectIfInfluencer;
 use Symfony\Component\HttpFoundation\Response;
 use App\Http\Middleware\InfluencerKycMiddleware;
 use App\Http\Middleware\RedirectIfAuthenticated;
@@ -20,6 +19,8 @@ use App\Http\Middleware\RedirectIfNotInfluencer;
 use App\Http\Middleware\InfluencerRegistrationStep;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\CheckSubscription;
+use App\Http\Middleware\RedirectIfInfluencer;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -84,6 +85,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'influencer.check'                 => InfluencerCheck::class,
             'influencer.registration.complete' => InfluencerRegistrationStep::class,
             'influencer.guest'                 => RedirectIfInfluencer::class,
+            'check.subscription'               => CheckSubscription::class,
         ]);
 
         $middleware->validateCsrfTokens(
@@ -111,3 +113,4 @@ return Application::configure(basePath: dirname(__DIR__))
             return $response;
         });
     })->create();
+

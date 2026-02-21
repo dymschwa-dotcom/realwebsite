@@ -11,7 +11,7 @@
                 </div>
             </div>
         </div>
-        <div class="row gy-4">
+        <div class="row gy-4 justify-content-center">
             @foreach ($howWorkElement as $howWork)
                 <div class="col-lg-3 col-md-6 col-sm-6">
                     <div class="work-item text-center">

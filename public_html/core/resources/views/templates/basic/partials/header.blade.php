@@ -10,8 +10,8 @@
             <div class="navbar-collapse collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav nav-menu ms-auto me-lg-2 me-xl-0">
                     <li class="nav-item d-block d-lg-none">
-                        <div class="top-button d-flex justify-content-between align-items-center flex-wrap">
-                            @include($activeTemplate . 'partials.language')
+                        <div class="top-button d-flex justify-content-end align-items-center flex-wrap">
+
                             <ul class="login-registration-list d-flex align-items-center flex-wrap">
                                 @if (auth()->check())
                                     <li class="login-registration-list__item">
@@ -39,28 +39,31 @@
                         </li>
                     @endforeach
 
+                    @if(auth()->guard('influencer')->check())
                     <li class="nav-item">
                         <a class="nav-link {{ menuActive('campaign.all') }}" href="{{ route('campaign.all') }}" aria-current="page">@lang('Campaigns')</a>
                     </li>
+                    @endif
                     <li class="nav-item">
                         <a class="nav-link {{ menuActive('influencer.all') }}" href="{{ route('influencer.all') }}" aria-current="page">@lang('Influencers')</a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link {{ menuActive('blog*') }}" href="{{ route('blog') }}">@lang('Blogs')</a>
+                        <a class="nav-link {{ menuActive('pricing') }}" href="{{ route('pricing') }}">@lang('Pricing')</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ menuActive('blog*') }}" href="{{ route('blog') }}">@lang('Blogs')</a>
+                        </li>
                     @if (!auth()->check() && !auth()->guard('influencer')->check())
                         <li class="nav-item ">
                             <a class="nav-link {{ menuActive('contact') }}" href="{{ route('contact') }}">@lang('Contact')</a>
                         </li>
                     @endif
-                </ul>
+                    </ul>
                 <div class="d-none d-lg-block">
                     <ul class="header-login list primary-menu">
 
-                        <li>
-                            @include($activeTemplate . 'partials.language')
-                        </li>
+
 
                         @if (auth()->check())
                             <li class="header-login__item">
@@ -77,7 +80,8 @@
                         @endif
                     </ul>
                 </div>
-            </div>
+    </div>
         </nav>
     </div>
 </header>
+

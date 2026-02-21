@@ -3,34 +3,89 @@
     $fullWidth = true;
     $brandId = (auth()->guard('influencer')->check()) ? $participant->campaign->user_id : auth()->id();
     $influencerId = (auth()->guard('influencer')->check()) ? authInfluencerId() : $participant->influencer_id;
+
+    // Logic for filtering related jobs into tabs
+    $inquiryJobs = $relatedJobs->filter(function($job) {
+        return in_array($job->status, [
+            Status::PARTICIPATE_REQUEST_PENDING, 
+            Status::PARTICIPATE_INQUIRY, 
+            Status::PARTICIPATE_PROPOSAL
+        ]);
+    });
+    $activeJobs = $relatedJobs->filter(function($job) {
+        return in_array($job->status, [
+            Status::PARTICIPATE_REQUEST_ACCEPTED, 
+            Status::CAMPAIGN_JOB_DELIVERED, 
+            Status::CAMPAIGN_JOB_REPORTED
+        ]);
+    });
+    $completedJobs = $relatedJobs->filter(function($job) {
+        return in_array($job->status, [
+            Status::CAMPAIGN_JOB_COMPLETED, 
+            Status::PARTICIPATE_REQUEST_REJECTED, 
+            Status::CAMPAIGN_JOB_REFUNDED, 
+            Status::CAMPAIGN_JOB_CANCELED
+        ]);
+    });
+
+    // Default tab logic
+    $activeTab = 'active';
+    if ($inquiryJobs->where('id', $participant->id)->first()) {
+        $activeTab = 'inquiry';
+    } elseif ($completedJobs->where('id', $participant->id)->first()) {
+        $activeTab = 'completed';
+    }
 @endphp
 
 @section('content')
-<div class="inbox">
-    <div class="row justify-content-center gy-4">
+<div class="container px-md-5 py-4">
+    <div class="inbox">
+        <div class="row justify-content-center gy-4">
         
-        {{-- 1. LEFT SIDEBAR: Active Contracts Context --}}
+                {{-- 1. LEFT SIDEBAR: Active Contracts Context --}}
         <div class="col-xxl-3 col-lg-4 d-none d-lg-block">
             <div class="card custom--card h-100 shadow-sm">
                 <div class="card-header bg--base text-white">
-                    <h5 class="m-0 text-white">@lang('Brand Contracts')</h5>
+                    <h5 class="m-0 text-white"><i class="las la-file-contract"></i> @lang('Contracts')</h5>
                 </div>
-                <div class="list-group list-group-flush scrollable-list" style="max-height: 750px; overflow-y: auto;">
-                    @forelse($relatedJobs as $job)
-                        <a href="{{ auth()->guard('influencer')->check() ? route('influencer.campaign.conversation.inbox', $job->id) : route('user.participant.conversation.inbox', $job->id) }}" 
-                           class="list-group-item list-group-item-action {{ $job->id == $participant->id ? 'bg-light border-start border-4 border--base' : '' }} p-3">
-                            <div class="d-flex w-100 justify-content-between mb-1">
-                                <h6 class="mb-0 text-truncate" style="max-width: 140px;">{{ __($job->campaign->title) }}</h6>
-                                <small class="fw-bold text--base">{{ showAmount($job->budget) }}</small>
+                <div class="card-body p-0">
+                    {{-- Tab Navigation --}}
+                    <ul class="nav nav-tabs nav-tabs--custom border-bottom bg-light" id="inboxTab" role="tablist">
+                        <li class="nav-item flex-fill" role="presentation">
+                            <button class="nav-link w-100 py-3 small fw-bold {{ $activeTab == 'inquiry' ? 'active' : '' }}" id="inquiry-tab" data-bs-toggle="tab" data-bs-target="#inquiry" type="button" role="tab">@lang('Inquiry')</button>
+                        </li>
+                        <li class="nav-item flex-fill" role="presentation">
+                            <button class="nav-link w-100 py-3 small fw-bold {{ $activeTab == 'active' ? 'active' : '' }}" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab">@lang('Active')</button>
+                        </li>
+                        <li class="nav-item flex-fill" role="presentation">
+                            <button class="nav-link w-100 py-3 small fw-bold {{ $activeTab == 'completed' ? 'active' : '' }}" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab">@lang('Closed')</button>
+                        </li>
+                    </ul>
+
+                    {{-- Tab Content --}}
+                    <div class="tab-content" id="inboxTabContent">
+                        @foreach(['inquiry' => $inquiryJobs, 'active' => $activeJobs, 'completed' => $completedJobs] as $key => $jobs)
+                            <div class="tab-pane fade {{ $activeTab == $key ? 'show active' : '' }}" id="{{ $key }}" role="tabpanel">
+                                <div class="list-group list-group-flush scrollable-list" style="max-height: 650px; overflow-y: auto;">
+                                    @forelse($jobs as $job)
+                                        <a href="{{ auth()->guard('influencer')->check() ? route('influencer.campaign.conversation.inbox', $job->id) : route('user.participant.conversation.inbox', $job->id) }}" 
+                                           class="list-group-item list-group-item-action {{ $job->id == $participant->id ? 'bg-light border-start border-4 border--base' : '' }} p-3">
+                                            <div class="d-flex w-100 justify-content-between mb-1">
+                                                <h6 class="mb-0 text-truncate" style="max-width: 150px;">{{ __($job->campaign->title) }}</h6>
+                                                <small class="fw-bold text--base">{{ showAmount($job->budget) }}</small>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">{{ showDateTime($job->created_at, 'M d') }}</small>
+                                                <div class="scale-75 origin-right">@php echo $job->statusBadge; @endphp</div>
+                                            </div>
+                                        </a>
+                                    @empty
+                                        <div class="p-4 text-center text-muted small">@lang('No items found in this category')</div>
+                                    @endforelse
+                                </div>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted">{{ showDateTime($job->created_at, 'M d') }}</small>
-                                <div class="scale-75 origin-right">@php echo $job->statusBadge; @endphp</div>
-                            </div>
-                        </a>
-                    @empty
-                        <div class="p-3 text-center text-muted">@lang('No other active jobs.')</div>
-                    @endforelse
+                        @endforeach
+                    </div>
                 </div>
                 <div class="card-footer p-3">
                     @if(auth()->guard('influencer')->check())
@@ -251,6 +306,21 @@
 <x-confirmation-modal custom="true" />
 @endpush
 
+@push('style')
+<style>
+    .px-md-5 { padding-left: 3rem !important; padding-right: 3rem !important; }
+    .tiny-label { font-size: 10px; font-weight: 800; color: #999; letter-spacing: 1px; }
+    .sticky-sidebar { position: sticky; top: 20px; }
+    .bg--dark { background-color: #111 !important; }
+    .scrollable-list::-webkit-scrollbar { width: 4px; }
+    .scrollable-list::-webkit-scrollbar-thumb { background: #eee; border-radius: 10px; }
+    .chat__msg-body::-webkit-scrollbar { width: 4px; }
+    .chat__msg-body::-webkit-scrollbar-thumb { background: #eee; }
+    .nav-tabs--custom .nav-link { color: #666; border-radius: 0; border: none; border-bottom: 2px solid transparent; }
+    .nav-tabs--custom .nav-link.active { color: #000; border-bottom: 2px solid #37f; background: transparent; }
+</style>
+@endpush
+
 @push('script')
     <script>
         (function($) {
@@ -284,7 +354,7 @@
                 }
             });
 
-            function loadMore(count) {
+                        function loadMore(count) {
                 $('.message-loader-wrapper').fadeIn();
                 $.ajax({
                     method: "GET",
@@ -303,8 +373,11 @@
                          $('.message-loader-wrapper').fadeOut();
                     }
                 });
+            }
+
+            $("#messageForm").on('submit', function(e) {
                 e.preventDefault();
-                var formData = new FormData($(this)[0);
+                var formData = new FormData($(this)[0]);
                 $.ajax({
                     headers: {
                         "X-CSRF-TOKEN": "{{ csrf_token() }}",

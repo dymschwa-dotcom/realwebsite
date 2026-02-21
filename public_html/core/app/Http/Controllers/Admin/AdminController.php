@@ -376,7 +376,7 @@ class AdminController extends Controller {
 
     public function runSpecificMigration() {
         try {
-            $path = 'database/migrations/2024_01_01_000001_add_fields_to_influencer_packages.php';
+            $path = 'database/migrations/2024_01_01_000000_add_video_url_to_profile_galleries_table.php';
             \Illuminate\Support\Facades\Artisan::call('migrate', [
                 "--path" => $path,
                 "--force" => true
@@ -395,6 +395,52 @@ class AdminController extends Controller {
             return "Region column added successfully.";
         }
         return "Region column already exists.";
+    }
+
+    public function setupSubscriptions() {
+        try {
+            if (!\Illuminate\Support\Facades\Schema::hasTable('plans')) {
+                \Illuminate\Support\Facades\Schema::create('plans', function ($table) {
+                    $table->id();
+                    $table->string('name');
+                    $table->decimal('price', 28, 8)->default(0);
+                    $table->integer('campaign_limit')->default(0);
+                    $table->boolean('status')->default(1);
+                    $table->timestamps();
+                });
+            }
+
+            \Illuminate\Support\Facades\Schema::table('users', function ($table) {
+                if (!\Illuminate\Support\Facades\Schema::hasColumn('users', 'plan_id')) {
+                    $table->unsignedBigInteger('plan_id')->nullable()->after('balance');
+                }
+                if (!\Illuminate\Support\Facades\Schema::hasColumn('users', 'plan_ends_at')) {
+                    $table->timestamp('plan_ends_at')->nullable()->after('plan_id');
+                }
+            });
+
+            \Illuminate\Support\Facades\DB::table('plans')->updateOrInsert(['id' => 1], [
+                'name' => 'Starter',
+                'price' => 49.00,
+                'campaign_limit' => 3,
+                'status' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            \Illuminate\Support\Facades\DB::table('plans')->updateOrInsert(['id' => 2], [
+                'name' => 'Professional',
+                'price' => 99.00,
+                'campaign_limit' => -1,
+                'status' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return "Subscription system setup successfully. Columns added and plans seeded.";
+        } catch (\Exception $e) {
+            return "Error setting up subscriptions: " . $e->getMessage();
+        }
     }
 
 }

@@ -99,6 +99,26 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="col-xl-6 col-sm-6">
+                                <div class="form-group">
+                                    <label>@lang('Brand Campaign Commission')</label>
+                                    <div class="input-group">
+                                        <input type="number" step="any" class="form-control" name="brand_campaign_commission"
+                                               value="{{ getAmount(gs('brand_campaign_commission')) }}" required>
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-6 col-sm-6">
+                                <div class="form-group">
+                                    <label>@lang('Influencer Campaign Commission')</label>
+                                    <div class="input-group">
+                                        <input type="number" step="any" class="form-control" name="influencer_campaign_commission"
+                                               value="{{ getAmount(gs('influencer_campaign_commission')) }}" required>
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <button type="submit" class="btn btn--primary w-100 h-45">@lang('Submit')</button>
@@ -141,3 +161,4 @@
         })(jQuery);
     </script>
 @endpush
+

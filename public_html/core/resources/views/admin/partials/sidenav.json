@@ -40,6 +40,12 @@
         "route_name": "admin.category.index",
         "menu_active": "admin.category.index"
     },
+    "manage_plans": {
+        "title": "Manage Plans",
+        "icon": "las la-list",
+        "route_name": "admin.plan.index",
+        "menu_active": "admin.plan.index"
+    },
     "manage_users": {
         "title": "Manage Brands",
         "icon": "las la-users",

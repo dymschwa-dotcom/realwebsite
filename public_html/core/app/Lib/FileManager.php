@@ -128,21 +128,29 @@ class FileManager
         $manager = new ImageManager(new Driver());
         $image = $manager->read($this->file);
 
-        //resize the
+        // 1. Smart Resize (Cover/Fill logic)
 	    if ($this->size) {
 	        $size = explode('x', strtolower($this->size));
-	        $image->resize($size[0], $size[1]);
+            // Use cover() instead of resize() to prevent stretching
+            // and ensure the entire frame is filled elegantly.
+	        $image->cover($size[0], $size[1]);
 	    }
-        //save the image
-	    $image->save($this->path . '/' . $this->filename);
 
-        //save the image as thumbnail version
+        // 2. Optimization: Save with 75% quality to significantly reduce file size
+        // while maintaining high visual quality.
+	    $image->toJpeg(75)->save($this->path . '/' . $this->filename);
+
+        // 3. Save the image as thumbnail version
 	    if ($this->thumb) {
             if ($this->old) {
                 $this->removeFile($this->path . '/thumb_' . $this->old);
             }
 	        $thumb = explode('x', $this->thumb);
-	        $manager->read($this->file)->resize($thumb[0], $thumb[1])->save($this->path . '/thumb_' . $this->filename);
+            // Re-read to prevent double compression artifacts
+            $manager->read($this->file)
+                ->cover($thumb[0], $thumb[1])
+                ->toJpeg(70) // Thumbnails can be even more compressed
+                ->save($this->path . '/thumb_' . $this->filename);
 	    }
 	}
 
@@ -255,3 +263,4 @@ class FileManager
 	}
 
 }
+

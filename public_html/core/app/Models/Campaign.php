@@ -73,7 +73,7 @@ class Campaign extends Model {
             } else if ($this->status == Status::CAMPAIGN_REJECTED) {
                 $html = '<span class="badge badge--danger">' . trans('Rejected') . '</span>';
             } else {
-                $html = '<span class="badge badge--dark">' . trans('In-completed') . '</span>';
+                $html = '<span class="badge badge--dark">' . trans('Completed') . '</span>';
             }
             return $html;
         });

@@ -53,7 +53,7 @@ class ReviewController extends Controller {
         recentActivity(auth()->user()->username . ' has reviewed for your campaign job', 0, $influencer->id);
 
         $notify[] = ['success', 'Review added successfully'];
-        return to_route('user.participant.detail', $participant->id)->withNotify($notify);
+        return to_route('user.participant.conversation.inbox', $participant->id)->withNotify($notify);
     }
 
     protected function insertReview($review, $data, $column) {

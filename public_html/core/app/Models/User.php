@@ -74,6 +74,11 @@ class User extends Authenticatable
         );
     }
 
+    public function plan()
+    {
+        return $this->belongsTo(Plan::class, 'plan_id');
+    }
+
     public function mobileNumber(): Attribute
     {
         return new Attribute(

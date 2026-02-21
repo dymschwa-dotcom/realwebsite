@@ -1,7 +1,31 @@
 @extends($activeTemplate . 'layouts.frontend')
 @section('content')
-    <div class="infuencer-section pt-40 pb-120">
-        <div class="container">
+    <div class="infuencer-section pt-40 pb-120 position-relative">
+        @php
+            $isLoggedIn = auth()->check() || auth()->guard('influencer')->check();
+        @endphp
+
+        @if(!$isLoggedIn)
+            <div class="gate-overlay">
+                <div class="gate-card text-center">
+                    <h3 class="fw-bold mb-3">@lang('Want to see more?')</h3>
+                    <p class="mb-4 text-muted">@lang('Join thousands of brands and influencers on the platform.')</p>
+
+                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 mb-4">
+                        <a href="{{ route('user.register') }}" class="btn btn--base px-4 py-3 rounded-pill fw-bold shadow">
+                            <i class="las la-briefcase me-1"></i> @lang('Sign Up as Brand')
+                        </a>
+                        <a href="{{ route('influencer.register') }}" class="btn btn--base px-4 py-3 rounded-pill fw-bold shadow">
+                            <i class="las la-user-circle me-1"></i> @lang('Sign Up as Influencer')
+                        </a>
+                    </div>
+
+                    <p class="small text-muted">@lang('Already have an account?') <a href="{{ route('user.login') }}" class="text--base fw-bold">@lang('Log In')</a></p>
+                </div>
+            </div>
+        @endif
+
+        <div class="container @if(!$isLoggedIn) gated-content @endif">
             <form id="influencerFilterForm" action="" method="GET">
                 
                 {{-- 1. HERO SEARCH BAR SECTION --}}
@@ -344,6 +368,52 @@
     .favoriteBtn.active i {
         font-weight: 900;
     }
+
+    /* GATED CONTENT STYLES */
+    @if(!$isLoggedIn)
+    .gated-content {
+        filter: blur(5px);
+        pointer-events: none;
+        user-select: none;
+        opacity: 0.9;
+    }
+    .gate-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1000;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding-top: 300px;
+        background: rgba(0, 0, 0, 0.5);
+    }
+    .gate-card {
+        background: #fff;
+        padding: 4.5rem 3.5rem;
+        border-radius: 40px;
+        box-shadow: 0 40px 80px -15px rgba(0,0,0,0.35);
+        max-width: 750px;
+        width: 90%;
+        border: 1px solid rgba(0,0,0,0.05);
+        animation: fadeInUp 0.6s ease-out;
+    }
+    .gate-card h3 {
+        font-size: 2.5rem;
+    }
+    .gate-card p.mb-4 {
+        font-size: 1.2rem;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @endif
 </style>
 @endpush
 

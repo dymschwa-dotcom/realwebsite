@@ -49,26 +49,7 @@ Route::middleware('auth')->name('user.')->group(function () {
     Route::middleware(['check.status', 'registration.complete'])->group(function () {
         Route::namespace('User')->group(function () {
 
-            Route::controller('UserController')->group(function () {
-                Route::get('dashboard', 'home')->name('home');
-                Route::get('download-attachments/{file_hash}', 'downloadAttachment')->name('download.attachment');
-
-                // 2FA
-                Route::get('twofactor', 'show2faForm')->name('twofactor');
-                Route::post('twofactor/enable', 'create2fa')->name('twofactor.enable');
-                Route::post('twofactor/disable', 'disable2fa')->name('twofactor.disable');
-
-                // KYC
-                Route::get('kyc-form', 'kycForm')->name('kyc.form');
-                Route::get('kyc-data', 'kycData')->name('kyc.data');
-                Route::post('kyc-submit', 'kycSubmit')->name('kyc.submit');
-
-                // Report
-                Route::any('deposit/history', 'depositHistory')->name('deposit.history');
-                Route::get('transactions', 'transactions')->name('transactions');
-                Route::post('add-device-token', 'addDeviceToken')->name('add.device.token');
-            });
-
+            Route::middleware('check.subscription')->group(function () {
             Route::controller('CampaignController')->prefix('campaign')->name('campaign.')->group(function () {
                 Route::middleware('kyc')->group(function () {
                     Route::get('create/{step?}/{slug?}/{edit?}', 'create')->name('create');
@@ -110,6 +91,48 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::get('create-inquiry/{influencerId}', 'createInquiry')->name('create.inquiry');
                 Route::post('hire-inquiry/{id}', 'hireFromInquiry')->name('hire.inquiry');
             });
+            });
+
+            Route::controller('UserController')->group(function () {
+                Route::get('dashboard', 'home')->name('home');
+                Route::get('download-attachments/{file_hash}', 'downloadAttachment')->name('download.attachment');
+                // 2FA
+                Route::get('twofactor', 'show2faForm')->name('twofactor');
+                Route::post('twofactor/enable', 'create2fa')->name('twofactor.enable');
+                Route::post('twofactor/disable', 'disable2fa')->name('twofactor.disable');
+                // KYC
+                Route::get('kyc-form', 'kycForm')->name('kyc.form');
+                Route::get('kyc-data', 'kycData')->name('kyc.data');
+                Route::post('kyc-submit', 'kycSubmit')->name('kyc.submit');
+
+                // Report
+                Route::any('deposit/history', 'depositHistory')->name('deposit.history');
+                Route::get('transactions', 'transactions')->name('transactions');
+                Route::post('add-device-token', 'addDeviceToken')->name('add.device.token');
+
+                Route::post('subscribe/{id}', 'subscribePlan')->name('subscribe.plan');
+            });
+
+            Route::controller('CampaignController')->prefix('campaign')->name('campaign.')->group(function () {
+                Route::middleware('kyc')->group(function () {
+                    Route::get('create/{step?}/{slug?}/{edit?}', 'create')->name('create');
+                    Route::post('basic/{slug?}', 'basic')->name('basic');
+                    Route::post('content/{slug}', 'content')->name('content');
+                    Route::post('description/{slug}', 'description')->name('description');
+                    Route::post('requirement/{slug}', 'requirement')->name('requirement');
+                    Route::post('budget/{slug}', 'budget')->name('budget');
+                    Route::get('previous/{step?}/{slug?}', 'previous')->name('previous');
+                    Route::get('/invite/form/{id}', 'inviteForm')->name('invite.form');
+                    Route::get('get/influencer', 'getInfluencerUsername')->name('influencer.username');
+                    Route::post('send/invite/{id}', 'sendInviteRequest')->name('send.invite');
+                    Route::get('/', 'index')->name('index');
+                    Route::get('pending', 'pending')->name('pending');
+                    Route::get('approved', 'approved')->name('approved');
+                    Route::get('rejected', 'rejected')->name('rejected');
+                    Route::get('incomplete', 'incomplete')->name('incompleted');
+                    Route::get('view/{id}', 'view')->name('view');
+                });
+            });
 
             Route::controller('ReviewController')->prefix('review')->name('review.')->group(function () {
                 Route::middleware('kyc')->group(function () {
@@ -117,7 +140,7 @@ Route::middleware('auth')->name('user.')->group(function () {
                     Route::get('form/{participantId}/{id?}', 'reviewForm')->name('form');
                     Route::post('add/{participantId}/{id?}', 'add')->name('add');
                     Route::post('remove/{id}', 'remove')->name('remove');
-                });
+            });
             });
 
             Route::controller('FavoriteController')->prefix('favorite')->name('favorite.')->group(function () {
@@ -126,8 +149,8 @@ Route::middleware('auth')->name('user.')->group(function () {
                     Route::post('add', 'addFavorite')->name('add');
                     Route::post('delete', 'delete')->name('delete');
                     Route::post('remove/{id}', 'remove')->name('remove');
-                });
             });
+        });
 
             // Profile setting
             Route::controller('ProfileController')->group(function () {

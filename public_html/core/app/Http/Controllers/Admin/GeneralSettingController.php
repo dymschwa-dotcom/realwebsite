@@ -34,10 +34,12 @@ class GeneralSettingController extends Controller {
             'influencer_register_bonus_amount' => 'required|numeric|gte:0',
             'campaign_approval_charge'         => 'required|numeric|gte:0',
             'max_image_upload'                 => 'required|integer|gte:0',
+            'brand_campaign_commission'        => 'required|numeric|gte:0',
+            'influencer_campaign_commission'   => 'required|numeric|gte:0',
         ]);
 
         $timezones = timezone_identifiers_list();
-        $timezone  = @$timezones[$request->timezone] ?? 'UTC';
+        $timezone  = @$timezones[$request->timezone ?? 'UTC'];
 
         $general                                   = gs();
         $general->site_name                        = $request->site_name;
@@ -50,9 +52,9 @@ class GeneralSettingController extends Controller {
         $general->influencer_register_bonus_amount = $request->influencer_register_bonus_amount;
         $general->campaign_approval_charge         = $request->campaign_approval_charge;
         $general->max_image_upload                 = $request->max_image_upload;
+        $general->brand_campaign_commission        = $request->brand_campaign_commission;
+        $general->influencer_campaign_commission   = $request->influencer_campaign_commission;
         $general->save();
-        $general->save();
-
         $timezoneFile = config_path('timezone.php');
         $content      = '<?php $timezone = "' . $timezone . '" ?>';
         file_put_contents($timezoneFile, $content);
@@ -267,3 +269,4 @@ class GeneralSettingController extends Controller {
     }
 
 }
+

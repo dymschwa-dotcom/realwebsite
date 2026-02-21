@@ -47,7 +47,7 @@ class FileInfo {
         ];
         $data['userProfile'] = [
             'path' => 'assets/images/user/profile',
-            'size' => '350x300',
+            'size' => '800x800',
         ];
         $data['adminProfile'] = [
             'path' => 'assets/admin/images/profile',
@@ -77,7 +77,7 @@ class FileInfo {
         ];
         $data['category'] = [
             'path' => 'assets/images/category',
-            'size' => '30x30',
+            'size' => '800x600',
         ];
         $data['brand'] = [
             'path' => 'assets/images/brand',
@@ -91,13 +91,13 @@ class FileInfo {
         ];
         $data['influencer'] = [
             'path'  => 'assets/images/influencer/profile',
-            'size'  => '780x500',
-            'thumb' => '390x250',
+            'size'  => '800x800',
+            'thumb' => '400x400',
         ];
         $data['profileGallery'] = [
             'path'  => 'assets/images/influencer/profile/gallery',
-            'size'  => '780x500',
-            'thumb' => '130x85',
+            'size'  => '1200x800',
+            'thumb' => '400x300',
         ];
         $data['conversation'] = [
             'path' => 'assets/images/conversation',
@@ -106,3 +106,4 @@ class FileInfo {
     }
 
 }
+

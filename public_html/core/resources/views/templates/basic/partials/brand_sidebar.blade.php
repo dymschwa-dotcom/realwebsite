@@ -3,7 +3,7 @@
 @endphp
 <div class="sidebar-menu">
     <span class="sidebar-menu__close d-lg-none d-block"><i class="las la-times"></i></span>
-    <div class="sidebar-menu__profile text-center">
+        <div class="sidebar-menu__profile text-center">
         <div class="thumb">
             <img src="{{ getImage(getFilePath('brand') . '/' . $user->image, null, true) }}" alt="profile">
         </div>
@@ -11,7 +11,13 @@
             <div class="left text-start">
                 <h5 class="title">{{ __($user->fullname) }}</h5>
                 <p class="fs-14"><span>@</span>{{ __($user->username) }}</p>
-                <span class="date fs-14"> @lang('Joined at') {{ showDateTime($user->created_at, 'm D, Y') }}</span>
+                @if($user->plan_id)
+                    <span class="badge bg--base fs-12 mb-1">{{ __(@$user->plan->name) }} @lang('Plan')</span>
+                    <span class="date d-block fs-12 text-muted">@lang('Renews'): {{ showDateTime($user->plan_ends_at, 'M d, Y') }}</span>
+                @else
+                    <span class="badge bg-secondary fs-12 mb-1">@lang('No Active Plan')</span>
+                    <a href="{{ route('pricing') }}" class="date d-block fs-12 text--base">@lang('Subscribe Now')</a>
+                @endif
             </div>
             <div class="right">
                 <div class="dropdown profile-action">
@@ -104,3 +110,5 @@
         </li>
     </ul>
 </div>
+
+

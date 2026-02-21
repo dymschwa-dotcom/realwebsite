@@ -56,11 +56,26 @@ class CampaignController extends Controller {
         return view('Template::user.campaign.history', compact('pageTitle', 'campaigns', 'generalCampaigns', 'directWorkstreams'));
     }
 
-    public function create($step = 0, $slug = null, $edit = null) {
+        public function create($step = 0, $slug = null, $edit = null) {
+        $user = auth()->user();
+        $plan = $user->plan;
+
+        // Blocker: Check limit before allowing the user to even see the "Create" page
+        if (!$slug) {
+            $campaignCount = Campaign::where('user_id', $user->id)
+                ->whereIn('status', [Status::CAMPAIGN_APPROVED, Status::CAMPAIGN_PENDING])
+                ->count();
+
+            if ($plan && $plan->campaign_limit != -1 && $campaignCount >= $plan->campaign_limit) {
+                $notify[] = ['error', 'You have reached the campaign limit for your current plan. Please upgrade to create more.'];
+                return to_route('pricing')->withNotify($notify);
+            }
+        }
+
         $pageTitle   = 'Create Campaign';
         $tags        = Tag::active()->orderBy('name')->get();
         $allPlatform = Platform::active()->orderBy('name')->get();
-        $brand       = auth()->user();
+        $brand       = $user;
         $campaign    = null;
 
         // Check if we are coming from a specific inquiry/chat
@@ -73,7 +88,6 @@ class CampaignController extends Controller {
         }
 
         if ($slug) {
-            // Allow editing of inquiries (Status Approved)
             $campaign = Campaign::where('user_id', auth()->id())->where('slug', $slug)->firstOrFail();
             $step     = $edit ? 0 : $campaign->campaign_step;
         }
@@ -82,26 +96,44 @@ class CampaignController extends Controller {
         return view('Template::user.campaign.create', compact('pageTitle', 'tags', 'brand', 'allPlatform', 'step', 'campaign', 'categories', 'participantId'));
     }
 
-    public function basic(Request $request, $slug = null) {
+        public function basic(Request $request, $slug = null) {
+        $user = auth()->user();
+        $plan = $user->plan;
+
+        // 1. Enforce Plan Limits for NEW campaigns
+        if (!$slug) {
+            $campaignCount = Campaign::where('user_id', $user->id)
+                ->whereIn('status', [Status::CAMPAIGN_APPROVED, Status::CAMPAIGN_PENDING])
+                ->count();
+
+            if ($plan && $plan->campaign_limit != -1 && $campaignCount >= $plan->campaign_limit) {
+                return response()->json(['error' => ['You have reached the campaign limit for your current plan. Please upgrade to create more.']]);
+            }
+        }
+
+        // 2. Validate Input Data
         $invalid = $this->basicDataValidation($request, $slug);
         if ($invalid['status']) {
             return response()->json(['error' => $invalid['message']]);
         }
 
-        $campaign = $this->insertBasicData($request, $slug);
+        // 3. Insert or Update Basic Data
+        $campaignResponse = $this->insertBasicData($request, $slug);
 
-        if ($campaign['status']) {
-            return response()->json(['error' => $invalid['message']]);
+        if ($campaignResponse['status']) {
+            return response()->json(['error' => [$campaignResponse['message']]]);
         }
 
-        $campaign = $campaign['data'];
+        $campaign = $campaignResponse['data'];
 
+        // 4. Handle Platform Synchronization
         if ($slug) {
             $campaign->platforms()->sync($request->platform);
         } else {
             $campaign->platforms()->attach($request->platform);
         }
 
+        // 5. Render Next Step
         $html = view('Template::partials.campaign.content', compact('campaign'))->render();
         return response()->json([
             'step'          => $campaign->campaign_step,
@@ -506,4 +538,6 @@ class CampaignController extends Controller {
         ]);
     }
 }
+
+
 

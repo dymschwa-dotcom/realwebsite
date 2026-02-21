@@ -8,4 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 class InfluencerPackage extends Model
 {
     use HasFactory;
+
+    protected $guarded = ['id'];
+
+    public function platform()
+    {
+        return $this->belongsTo(Platform::class);
+    }
 }

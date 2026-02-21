@@ -21,13 +21,14 @@ class ProfileController extends Controller
     {
         $request->validate([
             'firstname' => 'required|string',
-            'lastname' => 'required|string',
+            'lastname'  => 'required|string',
             'brand_name' => 'required|string|max:40',
             'website'    => 'required|url|max:255',
-            'image'      => ['nullable', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png'])],
-        ],[
-            'firstname.required'=>'The first name field is required',
-            'lastname.required'=>'The last name field is required'
+            'image'      => ['nullable', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png']), 'max:5120'],
+        ], [
+            'firstname.required' => 'First name field is required',
+            'lastname.required'  => 'Last name field is required',
+            'image.max'          => 'Profile image may not be greater than 5MB',
         ]);
 
         $user = auth()->user();
@@ -84,3 +85,4 @@ class ProfileController extends Controller
         }
     }
 }
+

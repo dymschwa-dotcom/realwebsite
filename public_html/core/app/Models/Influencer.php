@@ -123,7 +123,7 @@ class Influencer extends Authenticatable
     }
 
     public function galleries() {
-        return $this->hasMany(ProfileGallery::class, 'influencer_id');
+        return $this->hasMany(ProfileGallery::class, 'influencer_id')->orderBy('sort_order', 'asc');
     }
 
     // SCOPES

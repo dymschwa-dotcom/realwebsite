@@ -86,6 +86,7 @@ Route::middleware('influencer')->name('influencer.')->group(function () {
 
                 Route::post('upload/image', 'uploadGalleryImage')->name('upload.gallery.image');
                 Route::post('image/remove/{id}', 'remove')->name('gallery.image.remove');
+                Route::post('gallery/update-order', 'updateGalleryOrder')->name('gallery.update.order');
 
                 Route::get('social-connect/{provider}', 'socialConnect')->name('social.connect');
                 Route::get('connect/callback/{provider}', 'callback')->name('social.connect.callback');

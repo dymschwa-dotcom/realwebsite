@@ -1,5 +1,8 @@
 @extends($activeTemplate . 'layouts.frontend')
 @section('content')
+    @php
+        $showInsights = (auth()->check() && auth()->user()->plan_id) || auth()->guard('influencer')->check();
+    @endphp
     <section class="influencer-profile-section pt-5 pb-120 bg-white">
         <div class="container">
             {{-- Photo Gallery Grid with Action Icons --}}
@@ -15,12 +18,17 @@
 
                 <div class="row g-2">
                     @php
-                        $galleryImages = $influencer->galleries->take(3);
+                        $galleryImages = $influencer->galleries->where('video_url', null)->take(3);
                     @endphp
                     @foreach($galleryImages as $gallery)
                         <div class="col-md-4">
-                            <div class="gallery-item h-100 overflow-hidden rounded-4 shadow-sm">
+                            <div class="gallery-item h-100 overflow-hidden rounded-4 shadow-sm position-relative">
                                 <img src="{{ getImage(getFilePath('profileGallery') . '/' . $gallery->image) }}" alt="gallery" class="w-100 h-100 object-fit-cover">
+                                @if($gallery->video_url)
+                                    <div class="video-indicator position-absolute top-50 start-50 translate-middle text-white fs-1" style="pointer-events: none; text-shadow: 0 0 20px rgba(0,0,0,0.5);">
+                                        <i class="las la-play-circle"></i>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     @endforeach
@@ -36,7 +44,14 @@
                 <div class="col-lg-7">
                     <div class="influencer-header mb-5">
                         <div class="d-flex align-items-center gap-4 mb-4">
-                            <img src="{{ getImage(getFilePath('influencer') . '/' . $influencer->image, getFileSize('influencer')) }}" alt="image" class="rounded-circle border" style="width: 100px; height: 100px; object-fit: cover;">
+                            <div class="position-relative">
+                                <img src="{{ getImage(getFilePath('influencer') . '/' . $influencer->image, getFileSize('influencer')) }}" alt="image" class="rounded-circle border" style="width: 100px; height: 100px; object-fit: cover;">
+                                @if($influencer->engagement && $influencer->avg_views && $influencer->primary_gender)
+                                    <span class="position-absolute bottom-0 end-0 bg-white rounded-circle d-flex align-items-center justify-content-center border" style="width: 25px; height: 25px; transform: translate(5%, 5%);">
+                                        <i class="las la-check-circle text-primary fs-5"></i>
+                                    </span>
+                                @endif
+                            </div>
                             <div>
                                 <h1 class="fw-bold h2 mb-1 text-dark">{{ $influencer->firstname }}</h1>
                                 <div class="d-flex flex-wrap align-items-center gap-3 text-secondary">
@@ -55,7 +70,7 @@
                             @foreach ($influencer->socialLink as $social)
                                 <div class="social-pill d-flex align-items-center gap-2 border rounded-pill px-3 py-1 bg-white shadow-sm">
                                     <span class="fs-18">@php echo $social->platform->icon @endphp</span>
-                                    <span class="fw-bold small">{{ getFollowerCount($social->followers) }}</span>
+                                    <span class="fw-bold small {{ !$showInsights ? 'blur-text' : '' }}">{{ getFollowerCount($social->followers) }}</span>
                                 </div>
                             @endforeach
                         </div>
@@ -93,23 +108,35 @@
                         {{-- Audience Tab --}}
                         @if($influencer->engagement && $influencer->avg_views && $influencer->primary_gender)
                         <div class="tab-pane fade show active" id="audience" role="tabpanel">
-                            <div class="row g-4">
-                                <div class="col-sm-4">
-                                    <div class="card border rounded-4 p-4 text-center bg-light shadow-none h-100">
-                                        <h6 class="text-muted mb-2 small text-uppercase fw-bold">@lang('Engagement')</h6>
-                                        <h3 class="fw-bold mb-0">{{ $influencer->engagement }}</h3>
+                            <div class="position-relative">
+                                @if(!$showInsights)
+                                    <div class="insight-lock-overlay">
+                                        <div class="text-center">
+                                            <i class="las la-lock fs-2 mb-2 text-dark"></i>
+                                            <h6 class="fw-bold mb-1">@lang('Subscribers Only')</h6>
+                                            <p class="small text-muted mb-2">@lang('Unlock detailed audience metrics')</p>
+                                            <a href="{{ route('pricing') }}" class="btn btn-dark btn-sm rounded-pill px-3">@lang('Upgrade Plan')</a>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="col-sm-4">
-                                    <div class="card border rounded-4 p-4 text-center bg-light shadow-none h-100">
-                                        <h6 class="text-muted mb-2 small text-uppercase fw-bold">@lang('Avg Views')</h6>
-                                        <h3 class="fw-bold mb-0">{{ $influencer->avg_views }}</h3>
+                                @endif
+                                <div class="row g-4 {{ !$showInsights ? 'blur-content' : '' }}">
+                                    <div class="col-sm-4">
+                                        <div class="card border rounded-4 p-4 text-center bg-light shadow-none h-100">
+                                            <h6 class="text-muted mb-2 small text-uppercase fw-bold">@lang('Engagement')</h6>
+                                            <h3 class="fw-bold mb-0">{{ $influencer->engagement }}</h3>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="col-sm-4">
-                                    <div class="card border rounded-4 p-4 text-center bg-light shadow-none h-100">
-                                        <h6 class="text-muted mb-2 small text-uppercase fw-bold">@lang('Primary Gender')</h6>
-                                        <h3 class="fw-bold mb-0">{{ $influencer->primary_gender }}</h3>
+                                    <div class="col-sm-4">
+                                        <div class="card border rounded-4 p-4 text-center bg-light shadow-none h-100">
+                                            <h6 class="text-muted mb-2 small text-uppercase fw-bold">@lang('Avg Views')</h6>
+                                            <h3 class="fw-bold mb-0">{{ $influencer->avg_views }}</h3>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <div class="card border rounded-4 p-4 text-center bg-light shadow-none h-100">
+                                            <h6 class="text-muted mb-2 small text-uppercase fw-bold">@lang('Primary Gender')</h6>
+                                            <h3 class="fw-bold mb-0">{{ $influencer->primary_gender }}</h3>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -118,51 +145,145 @@
 
                         {{-- Packages Tab --}}
                         <div class="tab-pane fade {{ !($influencer->engagement && $influencer->avg_views && $influencer->primary_gender) ? 'show active' : '' }}" id="packages" role="tabpanel">
+                            {{-- Dynamic Platform Filter Tabs --}}
+                            <ul class="nav nav-pills mb-3 gap-2" id="platform-filters" role="tablist">
+                                <li class="nav-item">
+                                    <button class="nav-link active rounded-pill btn-sm px-3 fw-bold" data-filter="all">@lang('All')</button>
+                                </li>
+                                @php
+                                    $uniquePlatformIds = $influencer->packages->pluck('platform_id')->unique();
+                                    $availablePlatforms = \App\Models\Platform::whereIn('id', $uniquePlatformIds)->get();
+                                @endphp
+                                @foreach($availablePlatforms as $platform)
+                                    <li class="nav-item">
+                                        <button class="nav-link rounded-pill btn-sm px-3 fw-bold d-flex align-items-center gap-2" data-filter="platform-{{ $platform->id }}">
+                                            @php echo $platform->icon @endphp {{ $platform->name }}
+                                        </button>
+                                    </li>
+                                @endforeach
+                            </ul>
+
                             <div class="d-flex flex-column gap-3">
                                 @foreach ($influencer->packages ?? [] as $package)
-                                <div class="package-item border rounded-4 p-4 shadow-sm bg-white hover-shadow transition cursor-pointer"
-                                     onclick="selectPackage(this)"
-                                     data-id="{{ $package->id }}"
-                                     data-name="{{ __($package->name) }}"
-                                     data-price="{{ showAmount($package->price) }}">
-                                    <div class="row align-items-center">
-                                        <div class="col-1">
-                                            <input type="radio" name="package_select" class="form-check-input" style="transform: scale(1.2);">
+                                <div class="package-wrapper filter-item platform-{{ $package->platform_id }}">
+                                    <div class="package-item border rounded-4 p-4 shadow-sm bg-white hover-shadow transition cursor-pointer"
+                                         onclick="selectPackage(this)"
+                                         data-id="{{ $package->id }}"
+                                         data-name="{{ __($package->name) }}"
+                                         data-price="{{ showAmount($package->price) }}">
+                                        
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center gap-3">
+                                                @if($package->platform)
+                                                    <div class="social-icon fs-2 text-muted">
+                                                        @php echo $package->platform->icon @endphp
+                                                    </div>
+                                                @endif
+                                                <div class="flex-grow-1">
+                                                    <h5 class="fw-bold mb-1">{{ __($package->name) }}</h5>
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <div class="text-muted small text-truncate" style="max-width: 250px;">
+                                                            {{ __($package->description) }}
+                                                        </div>
+                                                        <span class="cursor-pointer text-muted" onclick="event.stopPropagation(); toggleDetails('details-{{ $package->id }}', this)">
+                                                            <i class="las la-plus fs-6"></i>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="d-flex align-items-center gap-3">
+                                                <span class="h4 fw-bold mb-0 text-nowrap">{{ showAmount($package->price) }}</span>
+                                                <div class="form-check m-0">
+                                                    <input type="radio" name="package_select" class="form-check-input" style="transform: scale(1.3); cursor: pointer;">
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div class="col-sm-7">
-                                            <h5 class="fw-bold mb-2">{{ __($package->name) }}</h5>
-                                            <p class="text-muted small mb-0">{{ __($package->description) }}</p>
-                                        </div>
-                                        <div class="col-sm-4 text-sm-end mt-3 mt-sm-0">
-                                            <span class="h4 fw-bold mb-2">{{ showAmount($package->price) }}</span>
+                                    </div>
+                                    {{-- Expanded Details --}}
+                                    <div id="details-{{ $package->id }}" class="collapse">
+                                        <div class="p-4 bg-light border-start border-end border-bottom rounded-bottom-4 mx-2 mt-n2 position-relative" style="top: -5px; z-index: 0;">
+                                            <h6 class="fw-bold small text-uppercase text-muted mb-2">@lang('Description')</h6>
+                                            <p class="text-muted mb-3 small lh-base">{{ __($package->description) }}</p>
+                                            
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @if($package->delivery_time)
+                                                    <span class="badge bg-white text-secondary border fw-normal">
+                                                        <i class="las la-clock"></i> {{ $package->delivery_time }} @lang('Days')
+                                                    </span>
+                                                @endif
+                                                @if($package->post_count)
+                                                    <span class="badge bg-white text-secondary border fw-normal">
+                                                        <i class="las la-copy"></i> {{ $package->post_count }} @lang('Post')
+                                                    </span>
+                                                @endif
+                                                @if($package->video_length)
+                                                    <span class="badge bg-white text-secondary border fw-normal">
+                                                        <i class="las la-video"></i> {{ $package->video_length }}@lang('s')
+                                                    </span>
+                                                @endif
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                                 @endforeach
+
+                                {{-- Custom Package Card --}}
+                                <div class="custom-package-card border-dashed p-4 rounded-4 text-center mt-2 cursor-pointer hover-shadow transition" onclick="window.location.href='{{ route('user.participant.create.inquiry', $influencer->id) }}'">
+                                    <div class="mb-2 text-muted">
+                                        <i class="las la-magic fs-2"></i>
+                                    </div>
+                                    <h6 class="fw-bold mb-1">@lang('Create Custom Package')</h6>
+                                    <p class="text-muted small mb-0">@lang('Need something specific? Start a chat to discuss.')</p>
+                                </div>
                             </div>
                         </div>
-                        {{-- Reviews Tab --}}
-                        <div class="tab-pane fade" id="reviews" role="tabpanel">
-                            @forelse ($reviews as $review)
-                                <div class="review-card border-bottom pb-4 mb-4 last-child-no-border">
-                                    <div class="d-flex gap-3 align-items-start">
-                                        <img src="{{ getImage(getFilePath('userProfile') . '/' . $review->user->image, getFileSize('userProfile')) }}" alt="user" class="rounded-circle border" style="width: 48px; height: 48px; object-fit: cover;">
-                                        <div class="flex-grow-1">
-                                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                                <h6 class="fw-bold mb-0 text-dark">{{ $review->user->fullname }}</h6>
-                                                <span class="text-muted small">@php echo showRatings($review->rating) @endphp</span>
-                                            </div>
-                                            <p class="text-muted mb-0 small">{{ __($review->review) }}</p>
-                                        </div>
+                                {{-- Reviews Tab --}}
+        <div class="tab-pane fade" id="reviews" role="tabpanel">
+            <div class="d-flex flex-column gap-3">
+                @forelse ($reviews as $review)
+                    <div class="review-item border rounded-4 p-4 shadow-sm bg-white">
+                        <div class="d-flex gap-3 align-items-center">
+                            {{-- Brand Profile Picture --}}
+                            <img src="{{ getImage(getFilePath('brand') . '/' . $review->user->image) }}" 
+                                alt="{{ $review->user->username }}" 
+                                class="rounded-circle border" 
+                                style="width: 52px; height: 52px; object-fit: cover;">
+                    
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="fw-bold mb-0 text-dark">{{ $review->user->fullname }}</h6>
+                                        <span class="text-muted tiny-label" style="font-size: 0.7rem;">{{ showDateTime($review->created_at, 'M d, Y') }}</span>
+                                    </div>
+                            
+                                    {{-- Star Icon + Number --}}
+                                    <div class="bg-light px-3 py-1 rounded-pill border d-flex align-items-center gap-1">
+                                        <i class="las la-star text--warning fs-5"></i>
+                                        <span class="fw-bold text-dark small">{{ getAmount($review->star) }}</span>
                                     </div>
                                 </div>
-                            @empty
-                                <p class="text-muted small">@lang('No reviews yet')</p>
-                            @endforelse
+                            </div>
+                        </div>
+                
+                        <div class="mt-3">
+                            <p class="text-muted mb-0 small lh-base" style="font-size: 0.95rem;">
+                                {{ __($review->review) }}
+                            </p>
                         </div>
                     </div>
-                </div>
-
+                @empty
+                    <div class="text-center py-5 border rounded-4 bg-light">
+                        <div class="mb-2 text-muted">
+                            <i class="las la-comment-slash fs-1 opacity-25"></i>
+                        </div>
+                        <p class="text-muted fw-bold mb-0">@lang('No reviews yet')</p>
+                        <small class="text-muted">@lang('Be the first brand to leave feedback!')</small>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    </div> </div>    
                 {{-- STICKY WIDGET AREA --}}
                 <div class="col-lg-5 col-xl-4 offset-xl-1">
                     <div class="sticky-sidebar">
@@ -220,8 +341,28 @@
                     <div class="row g-3">
                         @foreach($influencer->galleries as $gallery)
                             <div class="col-md-4 col-sm-6">
-                                <div class="gallery-modal-item rounded-3 overflow-hidden shadow-sm h-100">
-                                    <img src="{{ getImage(getFilePath('profileGallery') . '/' . $gallery->image) }}" alt="gallery" class="w-100 h-100 object-fit-cover" style="min-height: 250px;">
+                                <div class="gallery-modal-item rounded-3 overflow-hidden shadow-sm h-100 position-relative">
+                                    @if($gallery->video_url)
+                                        <div class="ratio ratio-16x9 h-100">
+                                            @if($gallery->video_type == 'youtube')
+                                                @php
+                                                    $videoId = '';
+                                                    if (preg_match('/youtu\.be\/([a-zA-Z0-9_-]+)/', $gallery->video_url, $matches)) {
+                                                        $videoId = $matches[1];
+                                                    } elseif (preg_match('/youtube\.com.*v=([a-zA-Z0-9_-]+)/', $gallery->video_url, $matches)) {
+                                                        $videoId = $matches[1];
+                                                    }
+                                                @endphp
+                                                <iframe src="https://www.youtube.com/embed/{{ $videoId }}" allowfullscreen></iframe>
+                                            @else
+                                                <video controls class="w-100 h-100 object-fit-cover">
+                                                    <source src="{{ $gallery->video_url }}" type="video/mp4">
+                                                </video>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <img src="{{ getImage(getFilePath('profileGallery') . '/' . $gallery->image) }}" alt="gallery" class="w-100 h-100 object-fit-cover" style="min-height: 250px;">
+                                    @endif
                                 </div>
                             </div>
                         @endforeach
@@ -234,9 +375,50 @@
 
 @push('script')
 <script>
+    // Platform Filtering Logic
+    $('#platform-filters .nav-link').on('click', function() {
+        $('#platform-filters .nav-link').removeClass('active bg-dark text-white').addClass('text-muted');
+        $(this).addClass('active bg-dark text-white').removeClass('text-muted');
+        
+        const filter = $(this).data('filter');
+        if(filter === 'all') {
+            $('.filter-item').fadeIn();
+        } else {
+            $('.filter-item').hide();
+            $('.' + filter).fadeIn();
+        }
+    });
+
+    function toggleDetails(id, btn) {
+        $('#' + id).collapse('toggle');
+        // Toggle Icon
+        let icon = $(btn).find('i');
+        if(icon.hasClass('la-plus')) {
+            icon.removeClass('la-plus').addClass('la-minus');
+        } else {
+            icon.removeClass('la-minus').addClass('la-plus');
+        }
+    }
+
     function selectPackage(el) {
-        $('.package-item').removeClass('border-dark shadow-sm').addClass('border-light');
-        $(el).addClass('border-dark shadow-sm').removeClass('border-light');
+        // Toggle Deselect Logic
+        if ($(el).hasClass('selected-package')) {
+            $(el).removeClass('selected-package border-dark shadow-sm').addClass('border-light');
+            $(el).find('input[type="radio"]').prop('checked', false);
+            
+            $('#selection-summary').addClass('d-none');
+            $('#selected-name').text('');
+            $('#selected-price').text('');
+            $('#buy-form').attr('action', '');
+            return;
+        }
+
+        // Reset others
+        $('.package-item').removeClass('selected-package border-dark shadow-sm').addClass('border-light');
+        $('.package-item input[type="radio"]').prop('checked', false);
+
+        // Select clicked
+        $(el).addClass('selected-package border-dark shadow-sm').removeClass('border-light');
         $(el).find('input[type="radio"]').prop('checked', true);
 
         const name = $(el).data('name');
@@ -260,11 +442,13 @@
             const btn = $(this);
             const id = btn.data('id');
             $.post("{{ route('user.favorite.add') }}", {
-                influencer_id: id,
+                influencerId: id,
                 _token: "{{ csrf_token() }}"
             }, function(response) {
                 if(response.success) {
                     btn.toggleClass('active');
+                } else if (response.error) {
+                    alert(response.error);
                 }
             });
         @else
@@ -289,7 +473,7 @@
     }
     .btn-white {
         background-color: #fff;
-        color: #000;
+        color: #000 !important;
         border: 1px solid #eee;
     }
     .btn-white:hover {
@@ -368,6 +552,68 @@
     }
     .nav-tabs .nav-link.active {
         border-bottom-color: #000 !important;
+    }
+
+    /* Filter Tabs Styles */
+    .nav-pills .nav-link {
+        color: #666;
+        background: #f8f9fa;
+        border: 1px solid #eee;
+        transition: all 0.2s;
+    }
+    .nav-pills .nav-link:hover {
+        background-color: #eee;
+    }
+    .nav-pills .nav-link.active {
+        background-color: #000 !important;
+        color: #fff !important;
+        border-color: #000;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    
+    /* Selected Package State */
+    .selected-package {
+        border-color: #000 !important;
+        background-color: #fafafa !important;
+        transform: translateY(-3px);
+    }
+    
+    /* Expand Button */
+    .expand-btn {
+        width: 30px; 
+        height: 30px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center;
+    }
+    
+    .border-dashed {
+        border-style: dashed !important;
+    }
+
+    /* INSIGHT BLURRING */
+    .blur-text {
+        filter: blur(4px);
+        user-select: none;
+    }
+    .blur-content {
+        filter: blur(12px);
+        pointer-events: none;
+        user-select: none;
+        opacity: 0.6;
+    }
+    .insight-lock-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255,255,255,0.1);
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1.25rem;
     }
 </style>
 @endpush

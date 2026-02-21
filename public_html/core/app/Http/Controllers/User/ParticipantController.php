@@ -48,7 +48,11 @@ class ParticipantController extends Controller {
 
         $brand    = auth()->user();
         $campaign = $participant->campaign;
-        if ($participant->budget > $brand->balance) {
+
+        $general     = gs();
+        $commission  = ($participant->budget * $general->brand_campaign_commission) / 100;
+        $totalAmount = $participant->budget + $commission;
+        if ($totalAmount > $brand->balance) {
             $notify[] = ['error', 'Insufficient balance in your account'];
             return back()->withNotify($notify);
         }
@@ -59,14 +63,14 @@ class ParticipantController extends Controller {
         $influencer = $participant->influencer;
 
         if ($participant->budget > 0) {
-            $brand->balance -= $participant->budget;
+            $brand->balance -= $totalAmount;
             $brand->save();
 
             $transaction               = new Transaction();
             $transaction->user_id      = $brand->id;
-            $transaction->amount       = $participant->budget;
+            $transaction->amount       = $totalAmount;
             $transaction->post_balance = $brand->balance;
-            $transaction->charge       = 0;
+            $transaction->charge       = $commission;
             $transaction->trx_type     = '-';
             $transaction->details      = 'Accepted the influencer for the campaign';
             $transaction->trx          = getTrx();
@@ -89,7 +93,7 @@ class ParticipantController extends Controller {
             'brand'              => $brand->username,
             'participant_number' => $participant->participant_number,
             'title'              => $campaign->title,
-        ]);
+        );
 
         recentActivity('You have accepted the ' . $influencer->username . ' participation request', $brand->id);
         recentActivity($brand->username . ' has accepted your participant request', 0, $influencer->id);
@@ -137,8 +141,12 @@ class ParticipantController extends Controller {
         $influencer = $participant->influencer;
         $campaign   = $participant->campaign;
 
+        $general       = gs();
+        $commission    = ($participant->budget * $general->influencer_campaign_commission) / 100;
+        $payableAmount = $participant->budget - $commission;
+
         if ($campaign->payment_type == 'paid') {
-            $influencer->balance += $participant->campaign->budget;
+            $influencer->balance += $payableAmount;
         }
 
         $influencer->increment('order_completed');
@@ -147,9 +155,9 @@ class ParticipantController extends Controller {
         if ($campaign->payment_type == 'paid') {
             $transaction                = new Transaction();
             $transaction->influencer_id = $influencer->id;
-            $transaction->amount        = $participant->budget;
+            $transaction->amount        = $payableAmount;
             $transaction->post_balance  = $influencer->balance;
-            $transaction->charge        = 0;
+            $transaction->charge        = $commission;
             $transaction->trx_type      = '+';
             $transaction->details       = 'Campaign job completed';
             $transaction->trx           = getTrx();
@@ -160,7 +168,7 @@ class ParticipantController extends Controller {
                 'influencer'         => @$influencer->username,
                 'brand'              => $participant->campaign->user->username,
                 'participant_number' => $participant->participant_number,
-                'budget'             => showAmount($participant->budget, currencyFormat: false),
+                'budget'             => showAmount($payableAmount, currencyFormat: false),
                 'trx'                => $transaction->trx,
             ]);
         }
@@ -210,7 +218,10 @@ class ParticipantController extends Controller {
         $package = \App\Models\InfluencerPackage::findOrFail($id);
         $brand   = auth()->user();
 
-        if ($brand->balance < $package->price) {
+        $general     = gs();
+        $commission  = ($package->price * $general->brand_campaign_commission) / 100;
+        $totalAmount = $package->price + $commission;
+        if ($brand->balance < $totalAmount) {
             $notify[] = ['error', 'Insufficient balance to purchase this service'];
             return back()->withNotify($notify);
         }
@@ -273,14 +284,14 @@ class ParticipantController extends Controller {
         $participant->save();
 
         // 3. Deduct Balance & Create Transaction
-        $brand->balance -= $package->price;
+        $brand->balance -= $totalAmount;
         $brand->save();
 
         $transaction               = new Transaction();
         $transaction->user_id      = $brand->id;
-        $transaction->amount       = $package->price;
+        $transaction->amount       = $totalAmount;
         $transaction->post_balance = $brand->balance;
-        $transaction->charge       = 0;
+        $transaction->charge       = $commission;
         $transaction->trx_type     = '-';
         $transaction->details      = 'Purchased service: ' . $package->name;
         $transaction->trx          = getTrx();
@@ -296,7 +307,7 @@ class ParticipantController extends Controller {
             'post_balance'       => showAmount($brand->balance),
             'trx'                => $transaction->trx,
             'participant_number' => $participant->participant_number,
-        ]);
+        );
 
         notify($influencer, 'PARTICIPATE_REQUEST_ACCEPTED', [
             'influencer'         => $influencer->username,
@@ -323,7 +334,10 @@ class ParticipantController extends Controller {
             })->findOrFail($id);
         $brand = auth()->user();
 
-        if ($brand->balance < $request->budget) {
+        $general     = gs();
+        $commission  = ($request->budget * $general->brand_campaign_commission) / 100;
+        $totalAmount = $request->budget + $commission;
+        if ($brand->balance < $totalAmount) {
             $notify[] = ['error', 'Insufficient balance'];
             return back()->withNotify($notify);
         }
@@ -339,14 +353,14 @@ class ParticipantController extends Controller {
         $participant->save();
 
         // 3. Deduct Balance & Create Transaction
-        $brand->balance -= $request->budget;
+        $brand->balance -= $totalAmount;
         $brand->save();
 
         $transaction               = new Transaction();
         $transaction->user_id      = $brand->id;
-        $transaction->amount       = $request->budget;
+        $transaction->amount       = $totalAmount;
         $transaction->post_balance = $brand->balance;
-        $transaction->charge       = 0;
+        $transaction->charge       = $commission;
         $transaction->trx_type     = '-';
         $transaction->details      = 'Hired from inquiry: ' . $campaign->title;
         $transaction->trx          = getTrx();
@@ -402,7 +416,7 @@ class ParticipantController extends Controller {
             $campaign->content_requirements = [
                 $countKey             => $request->post_count ?? 1,
                 'video_length'        => $request->video_length,
-                $pName . '_type'      => [$pName == 'instagram' || $pName == 'facebook' ? 'photo' : 'video'],
+                $pName . '_type'      => [$pName == 'instagram' || $pName == 'facebook' ? 'photo' : 'video',
                 $pName . '_placement' => ['post']
             ];
         } else {
@@ -439,20 +453,23 @@ class ParticipantController extends Controller {
 
         $brand = auth()->user();
 
-        if ($brand->balance < $proposal->budget) {
+        $general     = gs();
+        $commission  = ($proposal->budget * $general->brand_campaign_commission) / 100;
+        $totalAmount = $proposal->budget + $commission;
+        if ($brand->balance < $totalAmount) {
             $notify[] = ['error', 'Insufficient balance to accept this proposal'];
             return back()->withNotify($notify);
         }
 
         // 1. Deduct Balance & Create Transaction
-        $brand->balance -= $proposal->budget;
+        $brand->balance -= $totalAmount;
         $brand->save();
 
         $transaction               = new Transaction();
         $transaction->user_id      = $brand->id;
-        $transaction->amount       = $proposal->budget;
+        $transaction->amount       = $totalAmount;
         $transaction->post_balance = $brand->balance;
-        $transaction->charge       = 0;
+        $transaction->charge       = $commission;
         $transaction->trx_type     = '-';
         $transaction->details      = 'Accepted proposal: ' . $proposal->campaign->title;
         $transaction->trx          = getTrx();
@@ -482,7 +499,7 @@ class ParticipantController extends Controller {
             })->first();
 
         if ($existing) {
-            return to_route('user.participant.detail', $existing->id);
+            return to_route('user.participant.conversation.inbox', $existing->id);
         }
 
         // 1. Create a Shadow Campaign for the Inquiry
@@ -520,7 +537,7 @@ class ParticipantController extends Controller {
 
         recentActivity('Started a conversation with ' . $influencer->username, $brand->id);
 
-        return to_route('user.participant.detail', $participant->id);
+        return to_route('user.participant.conversation.inbox', $participant->id);
     }
 }
 

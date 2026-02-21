@@ -89,3 +89,4 @@
         })(jQuery);
     </script>
 @endpush
+

@@ -28,6 +28,16 @@ class UserController extends Controller {
         $data['rejected_campaign']    = Campaign::where('user_id', $user->id)->rejected()->count();
         $data['incompleted_campaign'] = Campaign::where('user_id', $user->id)->inCompleted()->count();
 
+        // Refined work stats
+        $data['jobs_pending']   = Participant::whereHas('campaign', fn($q) => $q->where('user_id', $user->id))
+                                    ->where('status', Status::PARTICIPATE_REQUEST_PENDING)->count();
+        $data['jobs_ongoing']   = Participant::whereHas('campaign', fn($q) => $q->where('user_id', $user->id))
+                                    ->where('status', Status::PARTICIPATE_REQUEST_ACCEPTED)->count();
+        $data['jobs_delivered'] = Participant::whereHas('campaign', fn($q) => $q->where('user_id', $user->id))
+                                    ->where('status', Status::CAMPAIGN_JOB_DELIVERED)->count();
+        $data['jobs_completed'] = Participant::whereHas('campaign', fn($q) => $q->where('user_id', $user->id))
+                                    ->where('status', Status::CAMPAIGN_JOB_COMPLETED)->count();
+
         // 1. Fetch General Campaigns (The "Casting Calls")
         $generalCampaigns = Campaign::where('user_id', $user->id)
         ->where('campaign_type', 'general')
@@ -158,11 +168,11 @@ class UserController extends Controller {
             'country'      => 'required|in:' . $countries,
             'mobile_code'  => 'required|in:' . $mobileCodes,
             'username'     => 'required|unique:users|min:6',
-            'mobile'       => ['required', 'regex:/^([0-9]*)$/', Rule::unique('users')->where('dial_code', $request->mobile_code)],
+            'mobile'       => 'required', 'regex:/^([0-9]*)$/', Rule::unique('users')->where('dial_code', $request->mobile_code),
             'brand_name'   => 'required|string|max:40',
             'website'      => 'required|url|max:255',
             'image'        => ['required', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png'])],
-        ]);
+            ]);
 
         if (preg_match("/[^a-z0-9_]/", trim($request->username))) {
             $notify[] = ['info', 'Username can contain only small letters, numbers and underscore.'];
@@ -207,8 +217,8 @@ class UserController extends Controller {
         ]);
 
         if ($validator->fails()) {
-            return ['success' => false, 'errors' => $validator->errors()->all()];
-        }
+            return ['success' => false, 'errors' => $validator]->errors()->all();
+        };
 
         $deviceToken = DeviceToken::where('token', $request->token)->first();
 
@@ -239,4 +249,66 @@ class UserController extends Controller {
         header("Content-Type: " . $mimetype);
         return readfile($filePath);
     }
+
+           public function subscribePlan(Request $request, $id) {
+        $request->validate([
+            'type' => 'required|in:monthly,yearly',
+        ]);
+
+        $newPlan = \App\Models\Plan::active()->findOrFail($id);
+        $user = auth()->user();
+
+        // 1. Calculate the cost of the NEW plan
+        $newPlanCost = ($request->type == 'yearly') ? ($newPlan->price * 12 * 0.8) : $newPlan->price;
+
+        // 2. Calculate Pro-rata Credit from the CURRENT plan
+        $discountCredit = 0;
+        if ($user->plan_id && $user->plan_ends_at && $user->plan_ends_at > now()) {
+            $currentPlan = $user->plan;
+            if ($currentPlan && $currentPlan->price > 0) {
+                $remainingDays = now()->diffInDays($user->plan_ends_at);
+                
+                // Calculate unused value (assuming a standard 30-day month for credit base)
+                $dailyRate = $currentPlan->price / 30;
+                $discountCredit = $dailyRate * $remainingDays;
+            }
+        }
+
+        // 3. Determine Final Amount to Pay
+        $finalAmount = $newPlanCost - $discountCredit;
+        
+        // If credit is more than the new plan (e.g., a downgrade), make it 0 (free switch)
+        if ($finalAmount < 0) {
+            $finalAmount = 0;
+        }
+
+        // 4. Check Balance
+        if ($user->balance < $finalAmount) {
+            $needed = $finalAmount - $user->balance;
+            $notify[] = ['error', 'Insufficient balance. After pro-rata credit of ' . gs('cur_sym') . showAmount($discountCredit) . ', you still need ' . gs('cur_sym') . showAmount($finalAmount)];
+            return to_route('user.deposit.index', ['amount' => getAmount($finalAmount)])->withNotify($notify);
+        }
+
+        // 5. Process the Subscription
+        $user->balance -= $finalAmount;
+        $user->plan_id = $newPlan->id;
+        $user->plan_ends_at = ($request->type == 'yearly') ? now()->addYear() : now()->addMonth();
+        $user->save();
+
+        // 6. Record Transaction
+        $transaction               = new Transaction();
+        $transaction->user_id      = $user->id;
+        $transaction->amount       = $finalAmount;
+        $transaction->post_balance = $user->balance;
+        $transaction->charge       = 0;
+        $transaction->trx_type     = '-';
+        $transaction->details      = 'Subscribed to ' . $newPlan->name . ' (' . $request->type . '). Pro-rata discount of ' . gs('cur_sym') . showAmount($discountCredit) . ' applied.';
+        $transaction->trx          = getTrx();
+        $transaction->remark       = 'subscription';
+        $transaction->save();
+
+        $notify[] = ['success', 'Successfully switched to ' . $newPlan->name . ' plan!'];
+        return to_route('user.home')->withNotify($notify);
+    }
 }
+

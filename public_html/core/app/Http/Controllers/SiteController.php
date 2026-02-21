@@ -193,4 +193,11 @@ class SiteController extends Controller {
             return response()->download($file);
         }
     }
+
+    public function pricing() {
+        $pageTitle = 'Pricing';
+        $plans     = \App\Models\Plan::all();
+        return view('Template::pricing', compact('pageTitle', 'plans'));
+    }
 }
+

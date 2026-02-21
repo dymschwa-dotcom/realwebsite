@@ -49,6 +49,7 @@ Route::middleware('admin')->group(function () {
         Route::get('run-migration', 'runMigration')->name('run.migration');
         Route::get('run-specific-migration', 'runSpecificMigration')->name('run.specific.migration');
         Route::get('force-add-region', 'forceAddRegionColumn')->name('force.add.region');
+        Route::get('setup-subscriptions', 'setupSubscriptions')->name('setup.subscriptions');
 
         Route::get('download-attachments/{file_hash}', 'downloadAttachment')->name('download.attachment');
     });
@@ -372,6 +373,12 @@ Route::middleware('admin')->group(function () {
         Route::get('', 'index')->name('index');
         Route::post('store/{id?}', 'store')->name('store');
         Route::post('status/{id}', 'status')->name('status');
+    });
+
+    // Plans
+    Route::controller('PlanController')->name('plan.')->prefix('plans')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('update', 'update')->name('update');
     });
 
     // Tags

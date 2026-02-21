@@ -9,6 +9,14 @@
             <a href="{{ route('user.deposit.history') }}" class="btn btn--base outline btn--sm" type="button">@lang('Deposit History') <i class="fas fa-arrow-right"></i></a>
         </div>
     </div>
+    @if(request()->amount)
+    <div class="alert alert--primary d-flex align-items-center mb-4" role="alert">
+        <i class="las la-info-circle me-2 fs-4"></i>
+        <div>
+            @lang('We\'ve pre-filled the amount required for your selected subscription plan.')
+        </div>
+    </div>
+@endif
     <form class="deposit-form" action="{{ route('user.deposit.insert') }}" method="post">
         @csrf
         <input name="currency" type="hidden">
@@ -45,7 +53,8 @@
                             <div class="deposit-info__input">
                                 <div class="deposit-info__input-group input-group">
                                     <span class="deposit-info__input-group-text">{{ gs('cur_sym') }}</span>
-                                    <input class="form-control form--control amount" name="amount" type="text" value="{{ old('amount') }}" placeholder="@lang('00.00')" autocomplete="off">
+                                    <input class="form-control form--control amount" name="amount" type="text" value="{{ old('amount', request()->amount) }}" placeholder="@lang('00.00')" autocomplete="off">
+
                                 </div>
                             </div>
                         </div>
@@ -226,3 +235,4 @@
         })(jQuery);
     </script>
 @endpush
+

@@ -16,7 +16,7 @@ class ProfileController extends Controller {
         $pageTitle    = "Profile Setting";
         $influencer   = auth()->guard('influencer')->user();
         $categories   = Category::active()->select('id', 'name')->get();
-        $galleries    = $influencer->galleries;
+        $galleries    = $influencer->galleries()->orderBy('sort_order', 'asc')->get();
         $languageData = json_decode(file_get_contents(resource_path('views/partials/languages.json')));
         $platforms    = \App\Models\Platform::active()->get();
         $regions      = json_decode(file_get_contents(resource_path('views/partials/regions.json')), true);
@@ -29,17 +29,17 @@ class ProfileController extends Controller {
             'lastname'     => 'required|string',
             'category'     => 'required|array|min:1',
             'category.*'   => 'integer|exists:categories,id',
-            'bio'          => 'nullable|string|max:255',
+            'bio'          => 'nullable|string',
             'gender'       => 'nullable|string|in:male,female,other',
             'birth_date'   => 'nullable|date_format:Y-m-d|before:tomorrow',
-            'image'        => ['nullable', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png'])],
-            'social_link'  => 'required|array',
-            'followers'    => 'required|array',
-            'package'      => 'required|array|min:1',
+            'image'        => ['nullable', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png'])], 'max:5120',
+            'social_link'  => 'nullable|array',
+            'followers'    => 'nullable|array',
+            'package'      => 'nullable|array',
             'package.*.id' => 'nullable|integer',
-            'package.*.name' => 'required|string|max:255',
-            'package.*.description' => 'required|string',
-            'package.*.price' => 'required|numeric|min:0',
+            'package.*.name' => 'nullable|string|max:255',
+            'package.*.description' => 'nullable|string',
+            'package.*.price' => 'nullable|numeric|min:0',
             'package.*.platform_id' => 'nullable|integer|exists:platforms,id',
             'package.*.delivery_time' => 'nullable|integer|min:1',
             'package.*.post_count' => 'nullable|integer|min:1',
@@ -50,6 +50,7 @@ class ProfileController extends Controller {
         ], [
             'firstname.required' => 'The first name field is required',
             'lastname.required'  => 'The last name field is required',
+            'image.max' => 'Profile image may not be greater than 5MB',
         ]);
 
         $influencer = authInfluencer();
@@ -68,11 +69,7 @@ class ProfileController extends Controller {
         $influencer->lastname   = $request->lastname;
         $influencer->gender     = $request->gender;
         $influencer->birth_date = $request->birth_date;
-
-        $influencer->address = $request->address;
-        $influencer->city    = $request->city;
-        $influencer->state   = $request->state;
-        $influencer->zip     = $request->zip;
+        $influencer->city       = $request->city;
         $influencer->bio        = $request->bio;
         $influencer->region     = $request->region;
 
@@ -80,56 +77,111 @@ class ProfileController extends Controller {
             $influencer->categories()->sync($request->category);
         }
 
+        $influencer->save(); // Save basic info first
+
         // Handle Social Links
-        foreach ($request->social_link as $platformId => $link) {
-            if ($link) {
-                \App\Models\SocialLink::updateOrCreate(
-                    ['influencer_id' => $influencer->id, 'platform_id' => $platformId],
-                    ['social_link' => $link, 'followers' => $request->followers[$platformId] ?? 0]
-                );
-            } else {
-                \App\Models\SocialLink::where('influencer_id', $influencer->id)->where('platform_id', $platformId)->delete();
+        if ($request->social_link) {
+            foreach ($request->social_link as $platformId => $link) {
+                if (!empty($link)) {
+                    \App\Models\SocialLink::updateOrCreate(
+                        ['influencer_id' => $influencer->id, 'platform_id' => $platformId],
+                        ['social_link' => $link, 'followers' => $request->followers[$platformId] ?? 0]
+                    );
+                } else {
+                    \App\Models\SocialLink::where('influencer_id', $influencer->id)->where('platform_id', $platformId)->delete();
+                }
             }
         }
 
-        // Handle Packages
-        $packageIds = [];
-        foreach ($request->package as $item) {
-            if (@$item['id']) {
-                $package = \App\Models\InfluencerPackage::where('influencer_id', $influencer->id)->find($item['id']);
-            } else {
-                $package = new \App\Models\InfluencerPackage();
-                $package->influencer_id = $influencer->id;
-            }
-            if ($package) {
-                $package->name = $item['name'];
-                $package->description = $item['description'];
-                $package->price = $item['price'];
-                $package->platform_id = $item['platform_id'];
-                $package->delivery_time = $item['delivery_time'];
-                $package->post_count = $item['post_count'];
-                $package->video_length = $item['video_length'];
-                $package->save();
-                $packageIds[] = $package->id;
+        // Handle Packages - LOGIC FIXED
+        $keepPackageIds = [];
+        
+        if ($request->package && is_array($request->package)) {
+            foreach ($request->package as $item) {
+                // Skip empty rows (if name is missing, assume row is invalid/empty)
+                if (empty($item['name'])) continue;
+
+                if (!empty($item['id'])) {
+                    // Update existing
+                    $package = \App\Models\InfluencerPackage::where('influencer_id', $influencer->id)->find($item['id']);
+                } else {
+                    // Create new
+                    $package = new \App\Models\InfluencerPackage();
+                    $package->influencer_id = $influencer->id;
+                }
+
+                if ($package) {
+                    $package->name = $item['name'];
+                    $package->description = $item['description'] ?? '';
+                    $package->price = $item['price'] ?? 0;
+                    $package->platform_id = $item['platform_id'] ?? null;
+                    $package->delivery_time = $item['delivery_time'] ?? 7;
+                    $package->post_count = $item['post_count'] ?? 1;
+                    $package->video_length = $item['video_length'] ?? 0;
+                    $package->save();
+                    
+                    $keepPackageIds[] = $package->id;
+                }
             }
         }
-        \App\Models\InfluencerPackage::where('influencer_id', $influencer->id)->whereNotIn('id', $packageIds)->delete();
 
+        // Delete any packages that belong to this influencer but were NOT in the submitted list
+        \App\Models\InfluencerPackage::where('influencer_id', $influencer->id)
+            ->whereNotIn('id', $keepPackageIds)
+            ->delete();
+
+        // Handle Gallery Images
         if ($request->hasFile('images')) {
+            $lastSortOrder = \App\Models\ProfileGallery::where('influencer_id', $influencer->id)->max('sort_order') ?? 0;
             foreach ($request->file('images') as $image) {
                 try {
                     $newImage = fileUploader($image, getFilePath('profileGallery'), getFileSize('profileGallery'), null, getFileThumb('profileGallery'));
                     $gallery                = new \App\Models\ProfileGallery();
                     $gallery->influencer_id = $influencer->id;
                     $gallery->image         = $newImage;
-                    $gallery->save();
+                    $gallery->sort_order    = ++$lastSortOrder;
+            $gallery->save();
                 } catch (\Exception $exp) {
                 }
             }
         }
 
+        // Handle Video URL
+        if ($request->video_url) {
+            $lastSortOrder = \App\Models\ProfileGallery::where('influencer_id', $influencer->id)->max('sort_order') ?? 0;
+            $gallery = new \App\Models\ProfileGallery();
+            $gallery->influencer_id = $influencer->id;
+            $gallery->video_url = $request->video_url;
+            $gallery->sort_order = ++$lastSortOrder;
+
+            $path = getFilePath('profileGallery');
+
+            if (strpos($request->video_url, 'youtube.com') !== false || strpos($request->video_url, 'youtu.be') !== false) {
+                $gallery->video_type = 'youtube';
+                $thumbUrl = $this->getYoutubeThumbnail($request->video_url);
+                
+                if ($thumbUrl && $thumbUrl != 'default_video.jpg') {
+                    try {
+                        $contents = file_get_contents($thumbUrl);
+                        $filename = 'yt_' . uniqid() . '.jpg';
+                        if (!file_exists($path)) { mkdir($path, 0755, true); }
+                        file_put_contents($path . '/' . $filename, $contents);
+                        $gallery->image = $filename;
+                    } catch (\Exception $e) {
+                        $gallery->image = 'default_video.jpg';
+    }
+        } else {
+                    $gallery->image = 'default_video.jpg';
+                }
+            } else {
+                $gallery->video_type = 'link';
+                $gallery->image = 'default_video.jpg';
+    }
+            $gallery->save();
+        }
+
         recentActivity('Profile updated successfully', 0, $influencer->id);
-        $influencer->save();
+        
         $notify[] = ['success', 'Profile updated successfully'];
         return back()->withNotify($notify);
     }
@@ -145,7 +197,6 @@ class ProfileController extends Controller {
         if (gs('secure_password')) {
             $passwordValidation = $passwordValidation->mixedCase()->numbers()->symbols()->uncompromised();
         }
-
         $request->validate([
             'current_password' => 'required',
             'password'         => ['required', 'confirmed', $passwordValidation],
@@ -160,131 +211,66 @@ class ProfileController extends Controller {
             return back()->withNotify($notify);
         } else {
             $notify[] = ['error', 'The password doesn\'t match!'];
-        return back()->withNotify($notify);
+            return back()->withNotify($notify);
     }
-    }
-
-    public function uploadGalleryImage(Request $request) {
-        $maxUpload = gs('max_image_upload');
-        $request->validate([
-            'images'   => "required|array|max:$maxUpload",
-            'images.*' => ['required', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png'])],
-        ]);
-
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                try {
-                    $newImage = fileUploader($image, getFilePath('profileGallery'), getFileSize('profileGallery'), null, getFileThumb('profileGallery'));
-                } catch (\Exception $exp) {
-                    $notify[] = ['error', 'Couldn\'t upload your image.'];
-                    return back()->withNotify($notify);
-                }
-
-                $gallery                = new ProfileGallery();
-                $gallery->influencer_id = authInfluencerId();
-                $gallery->image         = $newImage;
-                $gallery->save();
-        }
 }
-
-        $notify[] = ['success', 'Images uploaded successfully'];
-        return back()->withNotify($notify);
-    }
 
     public function remove($id) {
         $gallery = ProfileGallery::where('influencer_id', authInfluencerId())->findOrFail($id);
-        $path    = getFilePath('profileGallery') . '/' . $gallery->image;
-        unlink($path);
+        
+        if ($gallery->image && !$gallery->video_url) {
+            $path = getFilePath('profileGallery') . '/' . $gallery->image;
+            @unlink($path);
+        }
+        
         $gallery->delete();
-        $notify[] = ['success', 'Image removed successfully'];
+
+        // Reorder remaining items
+        $galleries = ProfileGallery::where('influencer_id', authInfluencerId())->orderBy('sort_order', 'asc')->get();
+        foreach($galleries as $key => $item) {
+            $item->sort_order = $key + 1;
+            $item->save();
+        }
+
+        $notify[] = ['success', 'Item removed successfully'];
         return back()->withNotify($notify);
     }
-
-    public function submitSkill(Request $request) {
-
+    
+    public function updateGalleryOrder(Request $request) {
         $request->validate([
-            "skills"   => "nullable|array",
-            "skills.*" => "required|string",
+            'order' => 'required|array',
+            'order.*' => 'integer|exists:profile_galleries,id'
+        ]);
+
+        foreach ($request->order as $index => $id) {
+            \App\Models\ProfileGallery::where('influencer_id', authInfluencerId())
+                ->where('id', $id)
+                ->update(['sort_order' => $index + 1]);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    protected function getYoutubeThumbnail($url) {
+        $videoId = '';
+        if (preg_match('/youtu\.be\/([a-zA-Z0-9_-]+)/', $url, $matches)) {
+            $videoId = $matches[1];
+        } elseif (preg_match('/youtube\.com.*v=([a-zA-Z0-9_-]+)/', $url, $matches)) {
+            $videoId = $matches[1];
+        }
+        
+        if ($videoId) {
+            return "https://img.youtube.com/vi/{$videoId}/hqdefault.jpg";
+        }
+        return 'default_video.jpg';
+    }
+    
+    public function galleryStore(Request $request) {
+        $request->validate([
+            'gallery_image' => ['required', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png']), 'max:10240'],
         ], [
-            'skills.*' => 'skill field is required',
+            'gallery_image.max' => 'Gallery images may not be greater than 10MB',
         ]);
-
-        $influencer         = authInfluencer();
-        $influencer->skills = $request->skills;
-        $influencer->save();
-
-        recentActivity('Skill added successfully', 0, $influencer->id);
-        $notify[] = ['success', 'Skill added successfully'];
-        return back()->withNotify($notify);
-    }
-
-    public function addLanguage(Request $request) {
-
-        $request->validate([
-            'language'  => 'required|string|max:40',
-            'listening' => 'required|in:Basic,Medium,Fluent',
-            'speaking'  => 'required|in:Basic,Medium,Fluent',
-            'writing'   => 'required|in:Basic,Medium,Fluent',
-        ]);
-
-        $influencer   = authInfluencer();
-        $oldLanguages = authInfluencer()->languages ?? [];
-
-        $addedLanguages = array_keys($oldLanguages);
-
-        if (in_array(strtolower($request->language), array_map('strtolower', $addedLanguages))) {
-            $notify[] = ['error', $request->language . ' already added'];
-            return back()->withNotify($notify);
-        }
-
-        $newLanguage[$request->language] = [
-            'listening' => $request->listening,
-            'speaking'  => $request->speaking,
-            'writing'   => $request->writing,
-        ];
-
-        $languages = array_merge($oldLanguages, $newLanguage);
-
-        $influencer->languages = $languages;
-        $influencer->save();
-
-        recentActivity('Language added successfully', 0, $influencer->id);
-
-        $notify[] = ['success', 'Language added successfully'];
-        return back()->withNotify($notify);
-    }
-
-    public function removeLanguage($language) {
-        $influencer     = authInfluencer();
-        $oldLanguages   = $influencer->languages ?? [];
-        $addedLanguages = array_keys($oldLanguages);
-
-        if (in_array($language, $addedLanguages)) {
-            unset($oldLanguages[$language]);
-        }
-
-        $influencer->languages = $oldLanguages;
-        $influencer->save();
-
-        recentActivity('Language removed successfully', 0, $influencer->id);
-
-        $notify[] = ['success', 'Language removed successfully'];
-        return back()->withNotify($notify);
-    }
-
-    public function socialConnect($provider) {
-        $socialLogin = new SocialConnect($provider);
-        return $socialLogin->redirectDriver();
-    }
-
-    public function callback($provider) {
-        $socialLogin = new SocialConnect($provider);
-        try {
-            return $socialLogin->login();
-        } catch (\Exception $e) {
-            $notify[] = ['error', $e->getMessage()];
-            return to_route('home')->withNotify($notify);
-        }
     }
 }
 

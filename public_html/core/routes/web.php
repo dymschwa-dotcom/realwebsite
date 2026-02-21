@@ -40,6 +40,8 @@ Route::controller('SiteController')->group(function () {
     Route::get('blog', 'blog')->name('blog');
     Route::get('blog/{slug}', 'blogDetails')->name('blog.details');
 
+    Route::get('pricing', 'pricing')->name('pricing');
+
     Route::get('categories', 'categories')->name('categories');
 
     Route::get('policy/{slug}', 'policyPages')->name('policy.pages');
@@ -52,3 +54,4 @@ Route::controller('SiteController')->group(function () {
     Route::get('/{slug}', 'pages')->name('pages');
     Route::get('/', 'index')->name('home');
 });
+
