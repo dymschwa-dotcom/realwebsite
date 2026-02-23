@@ -159,7 +159,75 @@
     </section>
 
     {{-- Modals remain same but with class btn-dark and rounded-pill --}}
+    <div class="modal fade" id="paidCampaignModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="loginModalLabel"> @lang('Participate Campaign!')</h1>
+                    <span class="close" data-bs-dismiss="modal" type="button" aria-label="Close">
+                        <i class="las la-times"></i>
+                    </span>
+                </div>
+                <form method="POST">
+                    @csrf
+                    <div class="modal-body">
+                        <p>@lang('Remuneration amount must be less than or equal') {{ showAmount($campaign->budget) }}</p>
+                        <div class="form-group">
+                            <label class="form--label">@lang('Remuneration')</label>
+                            <input class="form--control" name="budget" type="text" value="{{ old('budget') }}"
+                                   required>
+                        </div>
+                        <button type="submit" class="btn btn--base w-100">@lang('Submit')</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="givewayCampaignModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="loginModalLabel"> @lang('Participate Campaign!')</h1>
+                    <span class="close" data-bs-dismiss="modal" type="button" aria-label="Close">
+                        <i class="las la-times"></i>
+                    </span>
+                </div>
+                <form method="POST">
+                    @csrf
+                    <div class="modal-body">
+                        <p>@lang('Are you sure to participate this campaign?')</p>
+                        <p>@lang('You will be rewarded with a gift for joining this campaign')</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn--dark btn--md"
+                                data-bs-dismiss="modal">@lang('No')</button>
+                        <button type="submit" class="btn btn--base btn--md">@lang('Yes')</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @endsection
+
+@push('script')
+    <script>
+        (function($) {
+            "use strict";
+            $('.paidCampaignBtn').on('click', function(e) {
+                var modal = $('#paidCampaignModal');
+                modal.find('form').attr('action', $(this).data('action'));
+                modal.modal('show')
+            });
+            $('.givewayCampaignBtn').on('click', function(e) {
+                var modal = $('#givewayCampaignModal');
+                modal.find('form').attr('action', $(this).data('action'));
+                modal.modal('show')
+            });
+
+        })(jQuery)
+    </script>
+@endpush
 
 @push('style')
 <style>
@@ -174,3 +242,4 @@
     .object-fit-cover { object-fit: cover; }
 </style>
 @endpush
+

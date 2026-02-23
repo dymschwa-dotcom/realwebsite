@@ -74,6 +74,12 @@
                                             <input class="form--control" name="website" type="text" value="{{ old('website') }}" required>
                                         </div>
                                     </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label">@lang('Company Name')</label>
+                                            <input class="form--control" name="company_name" type="text" value="{{ old('company_name') }}">
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="col-sm-12">
                                     <button class="btn btn--base w-100" type="submit">@lang('Submit')</button>

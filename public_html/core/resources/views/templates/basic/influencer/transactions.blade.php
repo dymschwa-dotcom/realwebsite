@@ -51,6 +51,7 @@
                     <th>@lang('Amount')</th>
                     <th>@lang('Post Balance')</th>
                     <th>@lang('Detail')</th>
+                    <th>@lang('Receipt')</th>
                 </tr>
             </thead>
             <tbody>
@@ -76,6 +77,15 @@
                         </td>
 
                         <td>{{ __($trx->details) }}</td>
+                        <td>
+                            @if ($trx->remark == 'campaign_completed')
+                                <a class="btn btn--base btn--sm outline" href="{{ route('influencer.payout.receipt', $trx->trx) }}">
+                                    <i class="las la-file-invoice-dollar"></i> @lang('Receipt')
+                                </a>
+                            @else
+                                <span class="text-muted fs-12">@lang('N/A')</span>
+                            @endif
+                        </td>
                     </tr>
                 @empty
                     <tr>

@@ -1,0 +1,1 @@
+Updated User/ParticipantController.php: acceptProposal() now redirects to user.participant.conversation.inbox instead of user.participant.detail

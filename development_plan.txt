@@ -1,0 +1,56 @@
+Plan to Link Attachments to Shadow Campaigns:
+1.  Update the 'CampaignConversation' model to support a 'is_deliverable' or 'related_campaign_id' flag?
+    *   Actually, the user request says 'they should assign it to the relevant shadow campaign'.
+    *   Currently, messages are already linked to a 'participant_id', which IS the shadow campaign participant record (User/Influencer pair per job).
+    *   However, the Unified Workspace pulls messages from ALL participant IDs between a pair.
+    *   If a file is uploaded in the 'Inquiry' thread (Participant A), but it's actually a draft for 'Active Job' (Participant B), we need a way to Tag it.
+
+2.  Wait, the prompt says: 'When an influencer uploads an attachment in the chat, if it's a draft or deliverable, they should assign it to the relevant shadow campaign.'
+    *   This implies a UI change in the upload form.
+    *   Currently, the upload form is generic.
+    *   We need to add a dropdown to the upload form: 'Assign File To: [General Chat] [Job: YouTube Review] [Job: Instagram Post]'.
+    *   This dropdown should list the 'Active' shadow campaigns (Participant IDs) between this pair.
+
+3.  Database Schema:
+    *   The 'campaign_conversations' table has 'participant_id'.
+    *   Currently, when sending a message from the Unified View, we just use the  of the *current page context* (or the one passed in the URL).
+    *   But since the view is unified, the user might be looking at the 'Inquiry' thread but want to upload a file for the 'Active Job'.
+    *   If we simply allow them to select the  in the dropdown, the existing database structure supports it!
+    *   We just need to ensure the backend  function respects the  sent from the form, rather than just using the one in the route parameter (or validating that the user has access to it).
+
+4.  UI Changes:
+    *   Modify  and the influencer counterpart.
+    *   Add a <select> inside the upload form.
+    *   Populate it with $activeJobs (and maybe $inquiryJobs).
+
+5.  Backend Changes:
+    *   Modify  -> .
+    *   It currently takes $id from the route: .
+    *   We should check if .
+    *   If so, validate that this  belongs to the same Brand/Influencer pair.
+    *   Then save the message/attachment with *that* .
+
+6.  Approve/Request Revision Logic:
+    *   The prompt says: 'The approve/request revision option should be next to it in the management table'.
+    *   The 'management table' likely refers to the Right Sidebar (Order Management) where we just added the Gallery.
+    *   We need to enhance the Gallery items to have actions (Approve/Reject).
+    *   This requires a way to store the status of an *attachment* or *message*.
+    *    table doesn't have a status for individual attachments.
+    *   It has ,  (text/json), , etc.
+    *   We might need to add  (boolean) and  (pending/approved/rejected) to the  table.
+    *   OR, we create a new table  linked to .
+    *   Given the constraints, adding columns to  is easier.
+    *   Columns:  (tinyint),  (0:Pending, 1:Approved, 2:Rejected),  (text).
+
+7.  Let's refine the Schema Change:
+    *   Add , ,  to .
+    *   This applies to the *whole message*. So if they upload 3 files in one message, they are treated as one 'submission'. This is acceptable.
+
+8.  Step-by-step Implementation:
+    *   Step A: Create migration (or manual alter since we are in dev/repair mode) to add columns.
+    *   Step B: Update Upload UI to include 'Mark as Deliverable' checkbox and 'Select Job' dropdown.
+    *   Step C: Update  logic to handle the new fields and target participant ID.
+    *   Step D: Update the Gallery UI in the Sidebar to show badges (Pending/Approved) and Action Buttons for the Brand.
+    *   Step E: Create routes/controller methods for  and .
+
+

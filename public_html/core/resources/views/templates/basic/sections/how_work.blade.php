@@ -2,7 +2,7 @@
     $howWorkContent = getContent('how_work.content', true);
     $howWorkElement = getContent('how_work.element');
 @endphp
-<div class="how-work-section bg-img py-120 section-bg" style="background-image: url({{ getImage($activeTemplateTrue . 'images/how_work.png') }})">
+<div class="how-work-section bg-img py-120 section-bg" style="background-image: url({{ getImage($activeTemplateTrue . 'images/how_work.png') }})" id="how-it-works">
     <div class="container">
         <div class="row">
             <div class="col-lg-12">
@@ -32,3 +32,4 @@
         </div>
     </div>
 </div>
+

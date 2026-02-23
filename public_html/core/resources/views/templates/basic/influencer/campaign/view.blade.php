@@ -98,8 +98,10 @@
                         <ul class="list-group list-group-flush">
                             @if (in_array(1, $campaign->platformId))
                                 @php
-                                    $type = implode(', ', @$campaign->content_requirements->facebook_type);
-                                    $placement = implode(', ', @$campaign->content_requirements->facebook_placement);
+                                    $facebookType = (array) (@$campaign->content_requirements->facebook_type ?? []);
+                                    $facebookPlacement = (array) (@$campaign->content_requirements->facebook_placement ?? []);
+                                    $type = implode(', ', $facebookType);
+                                    $placement = implode(', ', $facebookPlacement);
                                 @endphp
                                 <li
                                     class="list-group-item d-flex justify-content-between align-items-center flex-wrap px-0">
@@ -110,8 +112,10 @@
                             @endif
                             @if (in_array(2, $campaign->platformId))
                                 @php
-                                    $type = implode(', ', @$campaign->content_requirements->instagram_type);
-                                    $placement = implode(', ', @$campaign->content_requirements->instagram_placement);
+                                    $instagramType = (array) (@$campaign->content_requirements->instagram_type ?? []);
+                                    $instagramPlacement = (array) (@$campaign->content_requirements->instagram_placement ?? []);
+                                    $type = implode(', ', $instagramType);
+                                    $placement = implode(', ', $instagramPlacement);
                                 @endphp
                                 <li
                                     class="list-group-item d-flex justify-content-between align-items-center flex-wrap px-0">
@@ -125,11 +129,13 @@
                                  @php
                                     $youtubePlacement = (array) (@$campaign->content_requirements->youtube_placement ?? []);
                                     $placement = implode(', ', $youtubePlacement);
+                                    // Youtube only has video_count
+                                    $count = @$campaign->content_requirements->youtube_video_count;
                                 @endphp
                                 <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap px-0">
                                     <span class="fw-bold">@lang('Youtube')</span>
-                                    <span>@lang('Need') {{ @$campaign->content_requirements->youtube_video_count }}
-                                        {{ __(@$type) }} @lang('as') {{ __(@$placement) }}</span>
+                                    <span>@lang('Need') {{ $count }}
+                                        @lang('Video') @lang('as') {{ __(@$placement) }}</span>
                                 </li>
                             @endif
                         </ul>

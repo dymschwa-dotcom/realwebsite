@@ -18,8 +18,10 @@ Route::controller('TicketController')->prefix('ticket')->name('ticket.')->group(
 });
 
 Route::controller('CampaignController')->prefix('campaigns')->name('campaign.')->group(function () {
+    Route::middleware(['influencer'])->group(function () {
     Route::get('/', 'all')->name('all');
     Route::get('detail/{title}/{id}', 'detail')->name('detail');
+});
 });
 
 Route::controller('InfluencerController')->prefix('influencers')->name('influencer.')->group(function () {
@@ -53,5 +55,18 @@ Route::controller('SiteController')->group(function () {
 
     Route::get('/{slug}', 'pages')->name('pages');
     Route::get('/', 'index')->name('home');
+});
+
+Route::get('/run-migration', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        return \Illuminate\Support\Facades\Artisan::output();
+    } catch (\Exception $e) {
+        return $e->getMessage();
+    }
+});
+
+Route::get('/clear', function () {
+    \Illuminate\Support\Facades\Artisan::call('optimize:clear');
 });
 

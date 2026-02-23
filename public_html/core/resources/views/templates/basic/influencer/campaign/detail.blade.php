@@ -1,10 +1,20 @@
 @extends($activeTemplate . 'layouts.master')
 @section('content')
     <div class="row gy-4">
+        
+        {{-- Unified Brief Partial --}}
+        <div class="col-12">
+            @php $campaign = $participant->campaign; @endphp
+            @include($activeTemplate . 'partials.campaign_brief')
+        </div>
+
         <div class="col-md-6">
             <div class="card custom--card">
                 <div class="card-header">
-                    <h5 class="text-start m-0">@lang('Brand Information')</h5>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <h5 class="text-start m-0">@lang('Brand Information')</h5>
+                        <a class="btn btn--base outline btn--xsm" href="{{ route('influencer.campaign.conversation.inbox', $participant->id) }}"><i class="las la-arrow-left"></i> @lang('Go Back')</a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <ul class="list-group list-group-flush">
@@ -27,6 +37,10 @@
                         <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap px-0">
                             <span class="fw-bold">@lang('Country')</span>
                             <span>{{ __(@$participant->campaign->user->country_name) }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap px-0">
+                            <span class="fw-bold">@lang('GST Registered')</span>
+                            <span>{{ @$participant->campaign->user->is_gst_registered ? __('Yes') : __('No') }}</span>
                         </li>
                     </ul>
                 </div>

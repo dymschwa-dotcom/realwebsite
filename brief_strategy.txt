@@ -1,0 +1,5 @@
+Brief Consolidation Plan:
+1. Instead of creating a new database solution, we will enhance the existing 'Campaign Detail' view for both users.
+2. We will create a new partial view 'partials/campaign_brief.blade.php' that consolidates all brief information (basic, content requirements, dates, etc.) into a clean, printable format.
+3. We will include this partial in both 'user/campaign/detail.blade.php' and 'influencer/campaign/detail.blade.php', replacing the scattered lists.
+4. This ensures both parties see the exact same 'Single Source of Truth' brief.

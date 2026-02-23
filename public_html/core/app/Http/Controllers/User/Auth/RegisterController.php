@@ -65,7 +65,7 @@ class RegisterController extends Controller
     public function register(Request $request)
     {
         if (!gs('registration')) {
-            $notify[] = ['error', 'Registration not allowed'];
+            $notify[ = ['error', 'Registration not allowed'];
             return back()->withNotify($notify);
         }
         $this->validator($request->all())->validate();
@@ -100,6 +100,7 @@ class RegisterController extends Controller
         $user->kv = gs('kv') ? Status::NO : Status::YES;
         $user->ev = gs('ev') ? Status::NO : Status::YES;
         $user->sv = gs('sv') ? Status::NO : Status::YES;
+        $user->plan_id   = 1;
         $user->save();
 
         $adminNotification            = new AdminNotification();
@@ -168,3 +169,4 @@ class RegisterController extends Controller
     }
 
 }
+

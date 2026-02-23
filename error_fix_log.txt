@@ -1,0 +1,4 @@
+Fixed implode() error in Influencer Campaign View (view.blade.php).
+The 'youtube_placement' attribute in 'content_requirements' was potentially null or a string, causing implode() to fail.
+I cast it to an array explicitly: (array) (@->content_requirements->youtube_placement ?? [])
+I also fixed a variable reference where $type was being used for YouTube but wasn't defined in that block (it was only defined for Facebook/Instagram blocks). YouTube logic typically just needs 'Video' as type, or a specific lookup if available.

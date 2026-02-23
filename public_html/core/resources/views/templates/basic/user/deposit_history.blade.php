@@ -182,3 +182,4 @@
         })(jQuery);
     </script>
 @endpush
+

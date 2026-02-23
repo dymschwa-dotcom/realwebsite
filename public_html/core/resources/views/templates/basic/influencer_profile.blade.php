@@ -1,7 +1,7 @@
 @extends($activeTemplate . 'layouts.frontend')
 @section('content')
     @php
-        $showInsights = (auth()->check() && auth()->user()->plan_id) || auth()->guard('influencer')->check();
+        $showInsights = (auth()->check() && auth()->user()->plan_id>1) || auth()->guard('influencer')->check();
     @endphp
     <section class="influencer-profile-section pt-5 pb-120 bg-white">
         <div class="container">
@@ -193,7 +193,7 @@
                                             </div>
                                             
                                             <div class="d-flex align-items-center gap-3">
-                                                <span class="h4 fw-bold mb-0 text-nowrap">{{ showAmount($package->price) }}</span>
+                                                <span class="h4 fw-bold mb-0 text-nowrap">{{ showAmount($package->price) }} <span class="fs-6 text-muted">+ GST</span></span>
                                                 <div class="form-check m-0">
                                                     <input type="radio" name="package_select" class="form-check-input" style="transform: scale(1.3); cursor: pointer;">
                                                 </div>
@@ -617,3 +617,4 @@
     }
 </style>
 @endpush
+

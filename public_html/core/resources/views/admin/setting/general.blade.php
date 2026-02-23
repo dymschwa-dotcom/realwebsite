@@ -119,6 +119,55 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="col-xl-4 col-sm-6">
+                                <div class="form-group">
+                                    <label>@lang('GST Rate (Total Amount)')</label>
+                                    <div class="input-group">
+                                        <input type="number" step="any" class="form-control" name="gst_rate"
+                                               value="{{ getAmount(gs('gst_rate')) }}" required>
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-4 col-sm-6">
+                                <div class="form-group">
+                                    <label>@lang('GST on Commission Rate')</label>
+                                    <div class="input-group">
+                                        <input type="number" step="any" class="form-control" name="marketplace_commission_gst_rate"
+                                               value="{{ getAmount(gs('marketplace_commission_gst_rate')) }}" required>
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-4 col-sm-6">
+                                <div class="form-group">
+                                    <label>@lang('GST on Influencer Service Rate')</label>
+                                    <div class="input-group">
+                                        <input type="number" step="any" class="form-control" name="influencer_gst_rate"
+                                               value="{{ getAmount(gs('influencer_gst_rate')) }}" required>
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-6 col-sm-6">
+                                <div class="form-group">
+                                    <label>@lang('Marketplace GST Return Rate')</label>
+                                    <div class="input-group">
+                                        <input type="number" step="any" class="form-control" name="marketplace_gst_return_rate"
+                                               value="{{ getAmount(gs('marketplace_gst_return_rate')) }}" required>
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-6 col-sm-6">
+                                <div class="form-group">
+                                    <label>@lang('Marketplace GST Return To')</label>
+                                    <select class="form-control" name="marketplace_gst_return_to">
+                                        <option value="1" @selected(gs('marketplace_gst_return_to') == 1)>@lang('Influencer')</option>
+                                        <option value="2" @selected(gs('marketplace_gst_return_to') == 2)>@lang('Marketplace')</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <button type="submit" class="btn btn--primary w-100 h-45">@lang('Submit')</button>

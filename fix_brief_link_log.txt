@@ -1,0 +1,1 @@
+Updated 'Full Brief' link in Influencer Conversation View to point to 'influencer.campaign.detail' instead of 'influencer.campaign.view'. This ensures they see the new unified brief view.

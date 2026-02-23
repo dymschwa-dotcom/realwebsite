@@ -26,9 +26,11 @@ class PaymentController extends Controller
     public function depositInsert(Request $request)
     {
         $request->validate([
-            'amount' => 'required|numeric|gt:0',
-            'gateway' => 'required',
+            'amount'   => 'required|numeric|gt:0',
+            'gateway'  => 'required',
             'currency' => 'required',
+            'success_action'      => 'nullable|string',
+            'success_action_data' => 'nullable|string',
         ]);
 
 
@@ -63,6 +65,10 @@ class PaymentController extends Controller
         $data->trx = getTrx();
         $data->success_url = urlPath('user.deposit.history');
         $data->failed_url = urlPath('user.deposit.history');
+
+        $data->success_action      = $request->success_action;
+        $data->success_action_data = $request->success_action_data;
+
         $data->save();
         session()->put('Track', $data->trx);
         return to_route('user.deposit.confirm');
@@ -125,6 +131,27 @@ class PaymentController extends Controller
             $transaction->trx = $deposit->trx;
             $transaction->remark = 'deposit';
             $transaction->save();
+
+            if ($deposit->success_action) {
+                try {
+                    $actionData = json_decode($deposit->success_action_data, true) ?? [];
+                    request()->merge($actionData);
+
+                    if ($deposit->success_action == 'hire_influencer') {
+                        app(\App\Http\Controllers\User\ParticipantController::class)->accept($actionData['participant_id']);
+                    } elseif ($deposit->success_action == 'buy_service') {
+                        app(\App\Http\Controllers\User\ParticipantController::class)->buyService(request(), $actionData['package_id']);
+                    } elseif ($deposit->success_action == 'hire_from_inquiry') {
+                        app(\App\Http\Controllers\User\ParticipantController::class)->hireFromInquiry(request(), $actionData['participant_id']);
+                    } elseif ($deposit->success_action == 'accept_proposal') {
+                        app(\App\Http\Controllers\User\ParticipantController::class)->acceptProposal($actionData['proposal_id']);
+                    } elseif ($deposit->success_action == 'subscribe_plan') {
+                        app(\App\Http\Controllers\User\UserController::class)->subscribePlan(request(), $actionData['plan_id']);
+                    }
+                } catch (\Exception $e) {
+                    // Silently fail or log error - the balance is already added so user can try manually
+                }
+            }
 
             if (!$isManual) {
                 $adminNotification = new AdminNotification();
@@ -203,3 +230,4 @@ class PaymentController extends Controller
 
 
 }
+

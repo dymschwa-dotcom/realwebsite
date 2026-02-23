@@ -1,6 +1,12 @@
 @extends($activeTemplate . 'layouts.master')
 @section('content')
     <div class="row gy-4">
+        {{-- Unified Brief Partial --}}
+        <div class="col-12">
+            @php $campaign = $applicant->campaign; @endphp
+            @include($activeTemplate . 'partials.campaign_brief')
+        </div>
+
         <div class="col-md-6">
             <div class="card custom--card">
                 <div class="card-header">
@@ -17,6 +23,11 @@
                             <span>{{ __(@$applicant->influencer->country_name) }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap px-0">
+                            <span class="fw-bold">@lang('GST Registered')</span>
+                            <span>{{ @$applicant->influencer_is_gst_registered ? __('Yes') : __('No') }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap px-0">
+
                             <span class="fw-bold">@lang('Job Completed')</span>
                             <span>{{ getAmount(@$applicant->influencer->job_completed_count) }}</span>
                         </li>
@@ -30,10 +41,10 @@
         </div>
         <div class="col-md-6">
             <div class="card custom--card">
-                <div class="card-header">
+                                <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                         <h5 class="m-0">@lang('Campaign Information')</h5>
-                        <a class="btn btn--base outline btn--xsm" href="{{ route('user.participant.list', $applicant->campaign_id) }}"><i class="las la-arrow-left"></i> @lang('Go Back')</a>
+                        <a class="btn btn--base outline btn--xsm" href="{{ route('user.participant.conversation.inbox', $applicant->id) }}"><i class="las la-arrow-left"></i> @lang('Go Back')</a>
                     </div>
                 </div>
                 <div class="card-body">
@@ -63,15 +74,24 @@
                 </div>
             </div>
 
-            @if ($applicant->status == Status::CAMPAIGN_JOB_DELIVERED)
+                                    @if ($applicant->status == Status::CAMPAIGN_JOB_DELIVERED || $applicant->status == Status::PARTICIPATE_REQUEST_ACCEPTED)
                 <div class="card custom--card mt-4">
-                    <div class="card-header">
+                    <div class="card-header border-bottom-0 pb-0">
                         <h5 class="m-0">@lang('Take Action')</h5>
                     </div>
                     <div class="card-body">
                         <div class="d-flex justify-content-center gap-3">
-                            <button class="btn btn--success outline btn--md confirmationBtn" data-question="@lang('Are you sure to complete this campaign job')?" data-action="{{ route('user.participant.completed', $applicant->id) }}" type="button"><i class="las la-check-circle"></i> @lang('Complete')</button>
-                            <button class="btn btn--black outline btn--md report-btn" type="button"><i class="las la-gavel"></i> @lang('Report')</button>
+                            @if ($applicant->status == Status::CAMPAIGN_JOB_DELIVERED)
+                                <button class="btn btn--success outline btn--md confirmationBtn" data-question="@lang('Are you sure to complete this campaign job')?" data-action="{{ route('user.participant.completed', $applicant->id) }}" type="button"><i class="las la-check-circle"></i> @lang('Complete')</button>
+                                <button class="btn btn--black outline btn--md report-btn" type="button"><i class="las la-gavel"></i> @lang('Report')</button>
+                            @endif
+                            
+                            @if ($applicant->status == Status::PARTICIPATE_REQUEST_ACCEPTED)
+                                <div class="text-center w-100">
+                                    <p class="fs-14 text-muted mb-3">@lang('Job in progress. Escrow is locked.')</p>
+                                    <button class="btn btn--black outline btn--sm report-btn" type="button"><i class="las la-gavel"></i> @lang('Report Issue')</button>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>

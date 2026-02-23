@@ -78,6 +78,7 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::post('completed/{id}', 'completed')->name('completed');
                 Route::post('reported/{id}', 'reported')->name('reported');
                 Route::get('detail/{id}', 'detail')->name('detail');
+                Route::post('close-inquiry/{id}', 'closeInquiry')->name('close.inquiry');
 
                 Route::prefix('conversation')->name('conversation.')->group(function () {
                     Route::get('inbox/{id}', 'inbox')->name('inbox');
@@ -85,6 +86,9 @@ Route::middleware('auth')->name('user.')->group(function () {
                     Route::any('view-message', 'viewMessage')->name('view.message');
                     Route::post('send-proposal/{id}', 'sendProposal')->name('send.proposal');
                     Route::post('accept-proposal/{id}', 'acceptProposal')->name('accept.proposal');
+                    Route::post('reject-proposal/{id}', 'rejectProposal')->name('reject.proposal');
+                    Route::post('deliverable/approve', 'approveDeliverable')->name('deliverable.approve');
+                    Route::post('deliverable/reject', 'rejectDeliverable')->name('deliverable.reject');
                 });
 
                 Route::post('buy-service/{id}', 'buyService')->name('buy.service');
@@ -96,6 +100,7 @@ Route::middleware('auth')->name('user.')->group(function () {
             Route::controller('UserController')->group(function () {
                 Route::get('dashboard', 'home')->name('home');
                 Route::get('download-attachments/{file_hash}', 'downloadAttachment')->name('download.attachment');
+                Route::get('invoice/download/{trx}', 'downloadInvoice')->name('invoice.download');
                 // 2FA
                 Route::get('twofactor', 'show2faForm')->name('twofactor');
                 Route::post('twofactor/enable', 'create2fa')->name('twofactor.enable');

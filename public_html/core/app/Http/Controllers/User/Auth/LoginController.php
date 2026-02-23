@@ -96,8 +96,6 @@ class LoginController extends Controller
     public function logout()
     {
         $this->guard()->logout();
-        request()->session()->invalidate();
-
         $notify[] = ['success', 'You have been logged out.'];
         return to_route('user.login')->withNotify($notify);
     }
@@ -137,3 +135,4 @@ class LoginController extends Controller
 
 
 }
+

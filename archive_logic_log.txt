@@ -1,0 +1,4 @@
+Implemented Inquiry Archiving Logic.
+In User/ParticipantController.php -> acceptProposal():
+Added logic to automatically update any existing 'Inquiry' (Status: 8) threads between the same Brand and Influencer to 'Completed' (Status: 3).
+This ensures that once a job is hired (Accepted), the initial 'General Inquiry' thread moves from the 'Inquiry' tab to the 'Closed' tab in the UI, keeping the workspace clean.

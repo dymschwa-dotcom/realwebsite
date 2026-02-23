@@ -351,5 +351,14 @@ class InfluencerController extends Controller {
         return view('Template::influencer.reviews', compact('pageTitle', 'reviews'));
     }
 
+    public function downloadPayoutReceipt($trx) {
+        $transaction = Transaction::where('influencer_id', auth()->guard('influencer')->id())->where('trx', $trx)->firstOrFail();
+        $influencer = auth()->guard('influencer')->user();
+        $pageTitle = 'Payout Receipt - ' . $trx;
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('Template::influencer.payout_receipt', compact('transaction', 'influencer', 'pageTitle'));
+        return $pdf->download('payout-receipt-' . $trx . '.pdf');
+    }
+
 }
 

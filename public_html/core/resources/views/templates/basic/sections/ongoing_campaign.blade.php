@@ -3,7 +3,10 @@
     $campaigns = App\Models\Campaign::onGoing()->general()->withCount('participants')->orderBy('id', 'desc')->take(4)->get();
 @endphp
 
-@if (!blank($campaigns))
+@if (!blank($campaigns) && !auth()->check())
+    @php
+        $campaignRoute = auth()->guard('influencer')->check() ? route('campaign.all') : route('influencer.login');
+    @endphp
     <div class="influencer-campaign py-120 bg-white">
         <div class="container">
             {{-- Header with Clean Alignment --}}
@@ -12,18 +15,21 @@
                     <h2 class="fw-bold text-dark mb-0">{{ __(@$campaignContent->data_values->heading) }}</h2>
                     <div class="border-bottom border-dark border-3 mt-2" style="width: 60px;"></div>
                 </div>
-                <a href="{{ route('campaign.all') }}" class="text-dark fw-bold small text-decoration-underline text-underline-offset-4">
+                <a href="{{ $campaignRoute }}" class="text-dark fw-bold small text-decoration-underline text-underline-offset-4">
                     @lang('View All') <i class="las la-arrow-right ms-1"></i>
                 </a>
             </div>
 
             <div class="row g-4">
                 @foreach ($campaigns as $campaign)
+                    @php
+                        $detailRoute = auth()->guard('influencer')->check() ? route('campaign.detail', [slug($campaign->title), $campaign->id]) : route('influencer.login');
+                    @endphp
                     <div class="col-lg-6">
                         <div class="campaign-card-minimal d-flex gap-4 p-3 rounded-4 border hover-shadow transition">
                             {{-- Thumbnail with Unsplash Fallback --}}
                             <div class="campaign-card-img">
-                                <a href="{{ route('campaign.detail', [slug($campaign->title), $campaign->id]) }}" class="d-block h-100">
+                                <a href="{{ $detailRoute }}" class="d-block h-100">
                                     @if($campaign->image)
                                         <img src="{{ getImage(getFilePath('campaign') . '/' . $campaign->image, getFileSize('campaign')) }}" alt="campaign" class="rounded-3">
                                     @else
@@ -44,7 +50,7 @@
                                     </div>
                                     
                                     <h5 class="fw-bold mb-2">
-                                        <a href="{{ route('campaign.detail', [slug($campaign->title), $campaign->id]) }}" class="text-dark text-decoration-none">
+                                        <a href="{{ $detailRoute }}" class="text-dark text-decoration-none">
                                             {{ __(strLimit(@$campaign->title, 45)) }}
                                         </a>
                                     </h5>
@@ -61,7 +67,7 @@
 
                                 <div class="d-flex justify-content-between align-items-center mt-auto pt-2 border-top">
                                     <span class="h6 fw-bold mb-0 text-dark">{{ showAmount(@$campaign->budget) }}</span>
-                                    <a href="{{ route('campaign.detail', [slug($campaign->title), $campaign->id]) }}" class="btn btn-dark btn-sm rounded-pill px-3 py-1 fw-bold">
+                                    <a href="{{ $detailRoute }}" class="btn btn-dark btn-sm rounded-pill px-3 py-1 fw-bold">
                                         @lang('Details')
                                     </a>
                                 </div>
@@ -127,3 +133,4 @@
         }
     </style>
 @endpush
+

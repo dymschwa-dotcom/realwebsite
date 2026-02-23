@@ -33,10 +33,14 @@
                         <a class="nav-link {{ menuActive('home') }}" href="{{ route('home') }}" aria-current="page">@lang('Home')</a>
                     </li>
 
-                    @foreach ($pages as $k => $data)
                         <li class="nav-item">
-                            <a class="nav-link {{ menuActive('pages', null, $data->slug) }}" href="{{ route('pages', [$data->slug]) }}" aria-current="page">{{ __($data->name) }}</a>
+                        <a class="nav-link" href="{{ route('home') }}#how-it-works">@lang('How it Works')</a>
                         </li>
+
+                    @foreach ($pages as $k => $data)
+                    <li class="nav-item">
+                            <a class="nav-link {{ menuActive('pages', null, $data->slug) }}" href="{{ route('pages', [$data->slug]) }}" aria-current="page">{{ __($data->name) }}</a>
+                    </li>
                     @endforeach
 
                     @if(auth()->guard('influencer')->check())
@@ -46,19 +50,15 @@
                     @endif
                     <li class="nav-item">
                         <a class="nav-link {{ menuActive('influencer.all') }}" href="{{ route('influencer.all') }}" aria-current="page">@lang('Influencers')</a>
-                    </li>
-
+                        </li>
                     <li class="nav-item">
                         <a class="nav-link {{ menuActive('pricing') }}" href="{{ route('pricing') }}">@lang('Pricing')</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ menuActive('blog*') }}" href="{{ route('blog') }}">@lang('Blogs')</a>
-                        </li>
                     @if (!auth()->check() && !auth()->guard('influencer')->check())
                         <li class="nav-item ">
                             <a class="nav-link {{ menuActive('contact') }}" href="{{ route('contact') }}">@lang('Contact')</a>
-                        </li>
-                    @endif
+                            </li>
+                        @endif
                     </ul>
                 <div class="d-none d-lg-block">
                     <ul class="header-login list primary-menu">
@@ -79,7 +79,7 @@
                             </li>
                         @endif
                     </ul>
-                </div>
+    </div>
     </div>
         </nav>
     </div>

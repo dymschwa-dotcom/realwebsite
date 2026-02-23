@@ -8,6 +8,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class Participant extends Model {
 
+    protected $fillable = [
+        'campaign_id',
+        'influencer_id',
+        'budget',
+        'status',
+        'participant_number',
+        'gst_amount',
+        'commission_gst_amount',
+        'influencer_gst_amount',
+        'marketplace_gst_return_amount',
+        'influencer_is_gst_registered',
+        'influencer_country_code'
+    ];
+
     public function influencer() {
         return $this->belongsTo(Influencer::class, 'influencer_id');
     }

@@ -172,6 +172,7 @@ class UserController extends Controller {
             'brand_name'   => 'required|string|max:40',
             'website'      => 'required|url|max:255',
             'image'        => ['required', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png'])],
+            'company_name'  => 'nullable|string|max:255',
             ]);
 
         if (preg_match("/[^a-z0-9_]/", trim($request->username))) {
@@ -274,19 +275,29 @@ class UserController extends Controller {
             }
         }
 
-        // 3. Determine Final Amount to Pay
-        $finalAmount = $newPlanCost - $discountCredit;
+        // 3. Determine Final Amount to Pay (Pre-GST)
+        $subTotal = $newPlanCost - $discountCredit;
         
         // If credit is more than the new plan (e.g., a downgrade), make it 0 (free switch)
-        if ($finalAmount < 0) {
-            $finalAmount = 0;
+        if ($subTotal < 0) {
+            $subTotal = 0;
         }
+
+        // Calculate GST (15%)
+        $gstAmount = $subTotal * 0.15;
+        $finalAmount = $subTotal + $gstAmount;
 
         // 4. Check Balance
         if ($user->balance < $finalAmount) {
-            $needed = $finalAmount - $user->balance;
-            $notify[] = ['error', 'Insufficient balance. After pro-rata credit of ' . gs('cur_sym') . showAmount($discountCredit) . ', you still need ' . gs('cur_sym') . showAmount($finalAmount)];
-            return to_route('user.deposit.index', ['amount' => getAmount($finalAmount)])->withNotify($notify);
+            $notify[] = ['info', 'Redirecting to secure checkout to complete subscription'];
+            return to_route('user.deposit.index', [
+                'amount'              => getAmount($finalAmount),
+                'price'               => getAmount($subTotal),
+                'service_fee'         => 0,
+                'gst_amount'          => getAmount($gstAmount),
+                'success_action'      => 'subscribe_plan',
+                'success_action_data' => json_encode(['plan_id' => $id, 'type' => $request->type])
+            ])->withNotify($notify);
         }
 
         // 5. Process the Subscription
@@ -301,14 +312,27 @@ class UserController extends Controller {
         $transaction->amount       = $finalAmount;
         $transaction->post_balance = $user->balance;
         $transaction->charge       = 0;
+        $transaction->gst_amount   = $gstAmount;
         $transaction->trx_type     = '-';
-        $transaction->details      = 'Subscribed to ' . $newPlan->name . ' (' . $request->type . '). Pro-rata discount of ' . gs('cur_sym') . showAmount($discountCredit) . ' applied.';
+        $transaction->details      = 'Subscribed to ' . $newPlan->name . ' (' . $request->type . '). (Incl. GST)';
+        if ($discountCredit > 0) {
+            $transaction->details .= ' Pro-rata discount of ' . gs('cur_sym') . showAmount($discountCredit) . ' applied.';
+        }
         $transaction->trx          = getTrx();
-        $transaction->remark       = 'subscription';
+        $transaction->remark       = 'subscription_plan';
         $transaction->save();
 
         $notify[] = ['success', 'Successfully switched to ' . $newPlan->name . ' plan!'];
         return to_route('user.home')->withNotify($notify);
+    }
+
+    public function downloadInvoice($trx) {
+        $transaction = Transaction::where('user_id', auth()->id())->where('trx', $trx)->firstOrFail();
+        $user = auth()->user();
+        $pageTitle = 'Invoice - ' . $trx;
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('Template::user.invoice', compact('transaction', 'user', 'pageTitle'));
+        return $pdf->download('invoice-' . $trx . '.pdf');
     }
 }
 

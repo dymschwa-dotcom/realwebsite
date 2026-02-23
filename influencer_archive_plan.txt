@@ -1,0 +1,2 @@
+Adding auto-archive logic to Influencer/CampaignController.php as well.
+When an influencer accepts an INVITE, any pending INQUIRY threads with that brand should be closed.

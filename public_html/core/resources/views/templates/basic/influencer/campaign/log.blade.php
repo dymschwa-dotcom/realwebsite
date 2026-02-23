@@ -7,7 +7,6 @@
                 <option value="inquiry" @selected(request()->status == 'inquiry')>@lang('Inquiry')</option>
                 <option value="proposal" @selected(request()->status == 'proposal')>@lang('Proposal')</option>
                 <option value="pending" @selected(request()->status == 'pending')>@lang('Pending')</option>
-                <option value="pending" @selected(request()->status == 'pending')>@lang('Pending')</option>
                 <option value="accepted" @selected(request()->status == 'accepted')>@lang('Accepted')</option>
                 <option value="delivered" @selected(request()->status == 'delivered')>@lang('Delivered')</option>
                 <option value="completed" @selected(request()->status == 'completed')>@lang('Completed')</option>

@@ -66,6 +66,7 @@ Route::middleware('influencer')->name('influencer.')->group(function () {
                 //Report
                 Route::any('deposit/history', 'depositHistory')->name('deposit.history');
                 Route::get('transactions', 'transactions')->name('transactions');
+                Route::get('payout-receipt/{trx}', 'downloadPayoutReceipt')->name('payout.receipt');
                 Route::get('reviews', 'reviews')->name('reviews.list');
 
                 Route::post('add-device-token', 'addDeviceToken')->name('add.device.token');
@@ -103,6 +104,7 @@ Route::middleware('influencer')->name('influencer.')->group(function () {
                 Route::get('view/{id}', 'view')->name('view');
                 Route::post('deliver/{id}', 'deliver')->name('deliver');
                 Route::post('cancel/{id}', 'cancel')->name('cancel');
+                Route::post('close-inquiry/{id}', 'closeInquiry')->name('close.inquiry');
                 Route::prefix('conversation')->name('conversation.')->group(function () {
                     Route::get('inbox/{id}', 'inbox')->name('inbox');
                     Route::any('send-message/{id}', 'sendMessage')->name('send.message');

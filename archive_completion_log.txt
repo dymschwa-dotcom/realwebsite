@@ -1,0 +1,4 @@
+Implemented complete archive logic.
+1. User/ParticipantController.php: When Brand accepts a proposal -> Auto-archives Inquiry.
+2. Influencer/CampaignController.php: When Influencer accepts an invite -> Auto-archives Inquiry.
+This ensures bidirectional cleanup of the workspace.

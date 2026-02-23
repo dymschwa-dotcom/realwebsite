@@ -1,0 +1,5 @@
+Implemented Unified Campaign Brief.
+1. Created 'partials/campaign_brief.blade.php' as the single source of truth for campaign details.
+2. Updated 'user/campaign/detail.blade.php' to include this partial at the top.
+3. Updated 'influencer/campaign/detail.blade.php' to include this partial at the top.
+Now both Brand and Influencer see the exact same formatted brief.

@@ -24,6 +24,7 @@ class CampaignController extends Controller {
         });
         $this->userType = 'influencer';
     }
+
    
 
     public function participate(Request $request, $id) {
@@ -45,6 +46,11 @@ class CampaignController extends Controller {
         if ($isPreviousApplied) {
             $notify[] = ['error', 'You already participated in this campaign'];
             return back()->withNotify($notify);
+        }
+        
+        if(!$influencer->address || !$influencer->tax_number) {
+            $notify[] = ['error', 'Please complete your business profile (Address and Tax ID) in settings before participating.'];
+            return to_route('influencer.profile.setting')->withNotify($notify);
         }
 
         if ($invitedCampaign) {
@@ -83,6 +89,16 @@ class CampaignController extends Controller {
 
         recentActivity('New participate request added your campaign', $campaign->user_id);
         recentActivity('Participate request sent successfully', 0, $influencer->id);
+
+        // Auto-Archive Logic: If this was an Invite acceptance, close any open inquiries
+        if ($campaign->campaign_type == 'invite') {
+            Participant::where('influencer_id', $influencer->id)
+                ->where('status', Status::PARTICIPATE_INQUIRY)
+                ->whereHas('campaign', function($q) use ($campaign) {
+                    $q->where('user_id', $campaign->user_id);
+                })
+                ->update(['status' => Status::CAMPAIGN_JOB_COMPLETED]);
+        }
 
         $notify[] = ['success', 'Participate request sent successfully, wait for brand approval'];
         return back()->withNotify($notify);
@@ -178,8 +194,7 @@ class CampaignController extends Controller {
     public function cancel($id) {
         $participant         = Participant::accepted()->where('influencer_id', authInfluencerId())->findOrFail($id);
         $participant->status = Status::CAMPAIGN_JOB_CANCELED;
-        $participant->save();
-
+        // ... rest of cancel function ...
         $campaign = $participant->campaign;
 
         if ($campaign->payment_type == 'paid') {
@@ -212,6 +227,22 @@ class CampaignController extends Controller {
         recentActivity('You have canceled the campaign job', 0, $participant->influencer_id);
 
         $notify[] = ['success', 'Campaign job canceled successfully'];
+        return back()->withNotify($notify);
+    }
+
+    public function closeInquiry($id) {
+        $participant = Participant::where('status', Status::PARTICIPATE_INQUIRY)
+            ->where('influencer_id', authInfluencerId())
+            ->findOrFail($id);
+
+        $participant->status = Status::CAMPAIGN_JOB_COMPLETED;
+        $participant->save();
+
+        // Mark the shadow campaign as completed
+        $participant->campaign->status = Status::CAMPAIGN_COMPLETED;
+        $participant->campaign->save();
+
+        $notify[] = ['success', 'Inquiry closed and archived successfully'];
         return back()->withNotify($notify);
     }
 

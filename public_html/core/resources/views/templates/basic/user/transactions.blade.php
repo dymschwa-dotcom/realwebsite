@@ -47,9 +47,9 @@
                 <tr>
                     <th>@lang('Trx')</th>
                     <th>@lang('Transacted')</th>
-                    <th>@lang('Amount')</th>
-                    <th>@lang('Post Balance')</th>
+                    <th>@lang('Total Amount')</th>
                     <th>@lang('Detail')</th>
+                    <th>@lang('Invoice')</th>
                 </tr>
             </thead>
             <tbody>
@@ -66,15 +66,21 @@
                         <td>
                             <span
                                   class="fw-bold @if ($trx->trx_type == '+') text--success @else text--danger @endif">
-                                {{ $trx->trx_type }} {{ showAmount($trx->amount) }}
+                                {{ showAmount(abs($trx->amount)) }}
                             </span>
                         </td>
 
+                        <td>{{ __($trx->details) }}</td>
                         <td>
-                            {{ showAmount($trx->post_balance) }}
+                            @if($trx->remark == 'deposit' || $trx->remark == 'subscription_plan')
+                                <a href="{{ route('user.invoice.download', $trx->trx) }}" class="btn btn--base btn--xsm">
+                                    <i class="las la-file-invoice"></i> @lang('Receipt')
+                                </a>
+                            @else
+                                <span class="text-muted">--</span>
+                            @endif
                         </td>
 
-                        <td>{{ __($trx->details) }}</td>
                     </tr>
                 @empty
                     <tr>
@@ -109,3 +115,4 @@
         })(jQuery);
     </script>
 @endpush
+

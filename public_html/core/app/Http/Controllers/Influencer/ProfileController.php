@@ -27,6 +27,10 @@ class ProfileController extends Controller {
         $request->validate([
             'firstname'    => 'required|string',
             'lastname'     => 'required|string',
+            'address'      => 'nullable|string|max:255',
+            'tax_number'   => 'nullable|string|max:50',
+            'is_gst_registered' => 'nullable|boolean',
+            'gst_number'   => 'nullable|string|max:50',
             'category'     => 'required|array|min:1',
             'category.*'   => 'integer|exists:categories,id',
             'bio'          => 'nullable|string',
@@ -67,6 +71,10 @@ class ProfileController extends Controller {
 
         $influencer->firstname  = $request->firstname;
         $influencer->lastname   = $request->lastname;
+        $influencer->address    = $request->address;
+        $influencer->tax_number = $request->tax_number;
+        $influencer->is_gst_registered = $request->is_gst_registered ? 1 : 0;
+        $influencer->gst_number = $request->gst_number;
         $influencer->gender     = $request->gender;
         $influencer->birth_date = $request->birth_date;
         $influencer->city       = $request->city;
@@ -183,6 +191,12 @@ class ProfileController extends Controller {
         recentActivity('Profile updated successfully', 0, $influencer->id);
         
         $notify[] = ['success', 'Profile updated successfully'];
+
+        if (session()->has('redirect_after_profile_completion')) {
+            $redirectUrl = session()->pull('redirect_after_profile_completion');
+            return redirect($redirectUrl)->withNotify($notify);
+        }
+
         return back()->withNotify($notify);
     }
 

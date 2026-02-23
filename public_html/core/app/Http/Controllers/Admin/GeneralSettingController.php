@@ -36,6 +36,11 @@ class GeneralSettingController extends Controller {
             'max_image_upload'                 => 'required|integer|gte:0',
             'brand_campaign_commission'        => 'required|numeric|gte:0',
             'influencer_campaign_commission'   => 'required|numeric|gte:0',
+            'gst_rate'                         => 'required|numeric|gte:0',
+            'marketplace_commission_gst_rate'  => 'required|numeric|gte:0',
+            'influencer_gst_rate'              => 'required|numeric|gte:0',
+            'marketplace_gst_return_rate'      => 'required|numeric|gte:0',
+            'marketplace_gst_return_to'        => 'required|in:1,2',
         ]);
 
         $timezones = timezone_identifiers_list();
@@ -54,6 +59,11 @@ class GeneralSettingController extends Controller {
         $general->max_image_upload                 = $request->max_image_upload;
         $general->brand_campaign_commission        = $request->brand_campaign_commission;
         $general->influencer_campaign_commission   = $request->influencer_campaign_commission;
+        $general->gst_rate                         = $request->gst_rate;
+        $general->marketplace_commission_gst_rate  = $request->marketplace_commission_gst_rate;
+        $general->influencer_gst_rate              = $request->influencer_gst_rate;
+        $general->marketplace_gst_return_rate      = $request->marketplace_gst_return_rate;
+        $general->marketplace_gst_return_to        = $request->marketplace_gst_return_to;
         $general->save();
         $timezoneFile = config_path('timezone.php');
         $content      = '<?php $timezone = "' . $timezone . '" ?>';

@@ -22,13 +22,15 @@
                     <div class="footer-item">
                         <h5 class="footer-item__title">@lang('Quick Links')</h5>
                         <ul class="footer-menu">
+                            @if(auth()->guard('influencer')->check())
                             <li class="footer-menu__item">
                                 <a href="{{ route('campaign.all') }}" class="footer-menu__link">@lang('Campaigns')</a>
                             </li>
+                            @endif
                             <li class="footer-menu__item">
                                 <a href="{{ route('influencer.all') }}" class="footer-menu__link">@lang('Influencers') </a>
                             </li>
-                            <li class="footer-menu__item">
+                                <li class="footer-menu__item">
                                 <a href="{{ route('contact') }}" class="footer-menu__link">@lang('Contact')</a>
                             </li>
                         </ul>
@@ -39,13 +41,15 @@
                         <h5 class="footer-item__title">@lang('Useful Links')</h5>
                         <ul class="footer-menu">
                             @foreach ($policyPages as $policy)
-                                <li class="footer-menu__item">
+                            <li class="footer-menu__item">
                                     <a href="{{ route('policy.pages', $policy->slug) }}"
                                        class="footer-menu__link">
                                         {{ __(@$policy->data_values->title) }}
                                     </a>
                                 </li>
                             @endforeach
+                            <li class="footer-menu__item">
+                                    <a href="{{ route('blog') }}" class="footer-menu__link">@lang('Blog')</a>
                         </ul>
                     </div>
                 </div>
@@ -56,9 +60,6 @@
                         <ul class="footer-menu">
                             <li class="footer-menu__item">
                                 <a href="mailto:{{ @$contact->data_values->email_address }}" class="footer-menu__link"><i class="fas fa-envelope"></i> {{ @$contact->data_values->email_address }}</a>
-                            </li>
-                            <li class="footer-menu__item">
-                                <a href="tel:{{ @$contact->data_values->contact_number }}" class="footer-menu__link"><i class="fas fa-phone"></i> {{ @$contact->data_values->contact_number }}</a>
                             </li>
                         </ul>
                         <ul class="social-list">
@@ -72,21 +73,26 @@
                                 </li>
                             @endforeach
                         </ul>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
+                        </div>
+                    </div>
     <div class="bottom-footer-area section-bg">
         <div class="container">
             <div class="row gy-3">
                 <div class="col-md-12 text-center">
                     <div class="bottom-footer   py-4">
                         <div class="bottom-footer-text"> &copy; @lang('Copyright') @php echo date('Y') @endphp <a href="{{ route('home') }}" class="text--base">{{ __(gs('site_name')) }}</a> @lang('All Right Reserved').
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
+        </div>
+    </div>
 </footer>
+
+
+
+
+

@@ -45,6 +45,11 @@ class ParticipantController extends Controller {
         }
 
         $brand    = auth()->user();
+        if(!$brand->address || !$brand->tax_number) {
+            $notify[] = ['error', 'Please complete your business profile (Address and Tax ID) in settings before hiring.'];
+            return to_route('user.profile.setting')->withNotify($notify);
+        }
+        
         $campaign = $participant->campaign;
         if ($participant->budget > $brand->balance) {
             $notify[] = ['error', 'Insufficient balance in your account'];

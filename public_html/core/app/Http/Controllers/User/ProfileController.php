@@ -25,6 +25,10 @@ class ProfileController extends Controller
             'brand_name' => 'required|string|max:40',
             'website'    => 'required|url|max:255',
             'image'      => ['nullable', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png']), 'max:5120'],
+            'address'    => 'nullable|string|max:255',
+            'tax_number' => 'nullable|string|max:50',
+            'is_gst_registered' => 'nullable|boolean',
+            'gst_number' => 'nullable|string|max:50',
         ], [
             'firstname.required' => 'First name field is required',
             'lastname.required'  => 'Last name field is required',
@@ -38,6 +42,10 @@ class ProfileController extends Controller
 
         $user->brand_name = $request->brand_name;
         $user->website = $request->website;
+        $user->address = $request->address;
+        $user->tax_number = $request->tax_number;
+        $user->is_gst_registered = $request->is_gst_registered ? 1 : 0;
+        $user->gst_number = $request->gst_number;
 
         if ($request->hasFile('image')) {
             try {
@@ -50,6 +58,12 @@ class ProfileController extends Controller
 
         $user->save();
         $notify[] = ['success', 'Profile updated successfully'];
+
+        if (session()->has('redirect_after_profile_completion')) {
+            $redirectUrl = session()->pull('redirect_after_profile_completion');
+            return redirect($redirectUrl)->withNotify($notify);
+        }
+
         return back()->withNotify($notify);
     }
 

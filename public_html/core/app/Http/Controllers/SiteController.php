@@ -197,7 +197,9 @@ class SiteController extends Controller {
     public function pricing() {
         $pageTitle = 'Pricing';
         $plans     = \App\Models\Plan::all();
-        return view('Template::pricing', compact('pageTitle', 'plans'));
+        $faq = Frontend::where('data_keys', 'faq.content')->first();
+        $faqElements = Frontend::where('data_keys', 'faq.element')->orderBy('id')->get();
+        return view('Template::pricing', compact('pageTitle', 'plans', 'faq', 'faqElements'));
     }
 }
 

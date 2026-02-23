@@ -63,6 +63,12 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-0">
+                                        <label class="form--label fw-bold">@lang('Address')</label>
+                                        <input type="text" class="form-control form--control shadow-none" name="address" value="{{ $influencer->address }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-0">
                                         <label class="form--label fw-bold">@lang('Region / State')</label>
                                         <select name="region" class="form-control form--control shadow-none">
                                             <option value="">@lang('Select Region')</option>
@@ -81,6 +87,27 @@
                                     <div class="form-group mb-0">
                                         <label class="form--label fw-bold">@lang('City')</label>
                                         <input type="text" class="form-control form--control shadow-none" name="city" value="{{ $influencer->city }}" placeholder="@lang('e.g. Auckland Central')">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-0">
+                                        <label class="form--label fw-bold">@lang('IRD Number / TFN')</label>
+                                        <input type="text" class="form-control form--control shadow-none" name="tax_number" value="{{ $influencer->tax_number }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-0">
+                                        <label class="form--label fw-bold">@lang('Are you GST/VAT Registered?')</label>
+                                        <select name="is_gst_registered" class="form-control form--control shadow-none">
+                                            <option value="0" @selected(!$influencer->is_gst_registered)>@lang('No')</option>
+                                            <option value="1" @selected($influencer->is_gst_registered)>@lang('Yes')</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 {{ $influencer->is_gst_registered ? '' : 'd-none' }}" id="gst-number-container">
+                                    <div class="form-group mb-0">
+                                        <label class="form--label fw-bold">@lang('GST/VAT Number')</label>
+                                        <input type="text" class="form-control form--control shadow-none" name="gst_number" value="{{ $influencer->gst_number }}">
                                     </div>
                                 </div>
                                 <div class="col-12">
@@ -421,6 +448,14 @@
         "use strict";
         
         $('.select2').select2();
+        
+        $('select[name="is_gst_registered"]').on('change', function() {
+            if($(this).val() == 1) {
+                $('#gst-number-container').removeClass('d-none');
+            } else {
+                $('#gst-number-container').addClass('d-none');
+            }
+        });
         setupProfilePicPreview("#profilePicUpload1", ".profilePicPreview", 5);
 
                 // --- SORTABLE GALLERY LOGIC ---

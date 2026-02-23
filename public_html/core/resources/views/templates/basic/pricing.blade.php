@@ -38,23 +38,23 @@
                                         <span class="fs-1 fw-bold">{{ gs('cur_sym') }}<span class="plan-price"
                                                   data-monthly="{{ getAmount($plan->price) }}"
                                                   data-yearly="{{ getAmount($plan->price * 0.8) }}">{{ getAmount($plan->price) }}</span></span>
-                                        <span class="text-muted monthly-subtext">/@lang('mo')</span>
-                                        <span class="text-muted yearly-subtext d-none">/@lang('mo') <small class="d-block fs-14">@lang('billed annually')</small></span>
+                                        <span class="text-muted monthly-subtext">/@lang('mo') <span class="fs-12">+ GST</span></span>
+                                        <span class="text-muted yearly-subtext d-none">/@lang('mo') <span class="fs-12">+ GST</span> <small class="d-block fs-14">@lang('billed annually')</small></span>
                                     </div>
                                     <p class="text-muted">
                                         @if ($plan->id == 1)
-                                            @lang('Perfect for small businesses starting with influencer marketing.')
+                                            @lang('Explore the platform and find the perfect talent for your brand.')
                                         @elseif($plan->id == 2)
-                                            @lang('For growing brands needing more scale and advanced features.')
+                                            @lang('Perfect for small businesses starting with influencer marketing.')
                                         @else
-                                            @lang('Browse the platform and find the perfect talent for your brand.')
+                                            @lang('For growing brands needing more scale and advanced features.')
                                         @endif
                                     </p>
                                 </div>
                                 <ul class="list-unstyled mb-5">
-                                    <li class="mb-3 d-flex align-items-center">
-                                        <i class="las la-check-circle text-success me-2 fs-4"></i>
-                                        <span>
+                                    <li class="mb-3 d-flex align-items-center {{ $plan->campaign_limit == 0 ? 'text-muted' : '' }}">
+                                        <i class="las {{ $plan->campaign_limit == 0 ? 'la-times-circle' : 'la-check-circle text-success' }} me-2 fs-4"></i>
+                                        <span class="{{ $plan->campaign_limit == 0 ? 'text-decoration-line-through' : '' }}">
                                             @if ($plan->campaign_limit == -1)
                                                 @lang('Unlimited Campaigns')
                                             @elseif($plan->campaign_limit == 0)
@@ -65,19 +65,23 @@
                                         </span>
                                     </li>
 
-                                    @if ($plan->id == 3)
-                                        <li class="mb-3 d-flex align-items-center">
-                                            <i class="las la-check-circle text-success me-2 fs-4"></i>
-                                            <span>@lang('Browse All Influencers')</span>
-                                        </li>
+                                    @if ($plan->id == 1)
                                         <li class="mb-3 d-flex align-items-center text-muted">
                                             <i class="las la-times-circle me-2 fs-4"></i>
                                             <span class="text-decoration-line-through">@lang('Direct Messaging')</span>
+                                        </li>
+                                        <li class="mb-3 d-flex align-items-center text-muted">
+                                            <i class="las la-times-circle me-2 fs-4"></i>
+                                            <span class="text-decoration-line-through">@lang('Full Influencer Details')</span>
                                         </li>
                                     @else
                                         <li class="mb-3 d-flex align-items-center">
                                             <i class="las la-check-circle text-success me-2 fs-4"></i>
                                             <span>@lang('Direct Messaging')</span>
+                                        </li>
+                                        <li class="mb-3 d-flex align-items-center">
+                                            <i class="las la-check-circle text-success me-2 fs-4"></i>
+                                            <span>@lang('Full Influencer Details')</span>
                                         </li>
                                         <li class="mb-3 d-flex align-items-center">
                                             <i class="las la-check-circle text-success me-2 fs-4"></i>
@@ -120,6 +124,40 @@
                     </div>
                 </div>
             </div>
+
+            @if($faqElements->count())
+                <div class="row justify-content-center mt-120">
+                    <div class="col-lg-12">
+                        <div class="section-heading style-center">
+                            <h2 class="section-heading__title">{{ __(@$faq->data_values->heading) }}</h2>
+                        </div>
+                    </div>
+                    <div class="col-lg-10">
+                        <div class="row gy-4">
+                            @foreach ($faqElements->chunk(ceil($faqElements->count() / 2)) as $faqChunk)
+                                <div class="col-md-6">
+                                    <div class="accordion custom--accordion">
+                                        @foreach ($faqChunk as $item)
+                                            <div class="accordion-item">
+                                                <h5 class="accordion-header" id="heading{{ $item->id }}">
+                                                    <button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#collapse{{ $item->id }}" type="button" aria-controls="collapse{{ $item->id }}" aria-expanded="false">
+                                                        {{ __(@$item->data_values->question) }}
+                                                    </button>
+                                                </h5>
+                                                <div class="accordion-collapse collapse" id="collapse{{ $item->id }}" data-bs-parent="#accordionExample{{ $loop->parent->index }}" aria-labelledby="heading{{ $item->id }}">
+                                                    <div class="accordion-body">
+                                                        <p class="accordion-body__desc">{{ __(@$item->data_values->answer) }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
     </section>
 @endsection
@@ -151,6 +189,13 @@
     }
     .text-primary {
         color: var(--base-color) !important;
+    }
+    /* ... existing code ... */
+    .custom--accordion .accordion-button {
+        font-size: 18px;
+    }
+    .mt-120 {
+        margin-top: 120px;
     }
 </style>
 @endpush

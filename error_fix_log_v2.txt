@@ -1,0 +1,3 @@
+Applied array casting fix to Facebook and Instagram blocks as well in influencer/campaign/view.blade.php.
+The original error was likely triggered by one of these blocks if the platform was active but the requirement data was missing or not an array.
+All three blocks (Facebook, Instagram, YouTube) now strictly cast their placement/type attributes to arrays before imploding.

@@ -75,10 +75,12 @@
                                             <small class="text--danger mobileExist"></small>
                                         </div>
                                     </div>
-
-                                    <div class="form-group col-md-6">
-                                        <label class="form-label">@lang('City')</label>
-                                        <input type="text" class="form-control form--control" name="city" value="{{ old('city') }}">
+                                    
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label">@lang('City')</label>
+                                            <input type="text" class="form-control form--control" name="city" value="{{ old('city') }}">
+                                        </div>
                                     </div>
 
                                     <div class="col-lg-6 col-md-12">
@@ -292,6 +294,14 @@ updateRegions($('select[name=country]').val());
                 "maxDate":maxDate,
                 "locale": {
                     "format": "YYYY-MM-DD",
+                }
+            });
+            
+            $('select[name="is_gst_registered"]').on('change', function() {
+                if($(this).val() == 1) {
+                    $('#gst-number-container').removeClass('d-none');
+                } else {
+                    $('#gst-number-container').addClass('d-none');
                 }
             });
 

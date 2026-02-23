@@ -68,7 +68,7 @@
                                         <i class="las la-ellipsis-v"></i>
                                     </span>
                                     <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink{{ $participant->id }}">
-                                        @if ($participant->status == Status::PARTICIPATE_REQUEST_PENDING)
+                                        @if ($participant->status == Status::PARTICIPATE_REQUEST_PENDING || $participant->status == Status::PARTICIPATE_PROPOSAL)
                                             <li>
                                                 <button class="dropdown-item confirmationBtn" data-action="{{ route('user.participant.accept', $participant->id) }}" data-question="@lang('Are you sure to accept this participant in your campaign')?" type="button">
                                                     <i class="las la-check-circle"></i> @lang('Accept')
@@ -79,7 +79,7 @@
                                                     <i class="las la-times-circle"></i> @lang('Reject')
                                                 </button>
                                             </li>
-                                        @elseif($participant->status == Status::PARTICIPATE_INQUIRY || $participant->status == Status::PARTICIPATE_PROPOSAL)
+                                        @elseif($participant->status == Status::PARTICIPATE_INQUIRY)
                                             <li>
                                                 <a class="dropdown-item" href="{{ route('user.participant.conversation.inbox', $participant->id) }}">
                                                     <i class="las la-sms"></i> @lang('Chat')

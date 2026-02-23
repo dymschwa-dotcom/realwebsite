@@ -420,15 +420,24 @@ class AdminController extends Controller {
             });
 
             \Illuminate\Support\Facades\DB::table('plans')->updateOrInsert(['id' => 1], [
-                'name' => 'Starter',
-                'price' => 49.00,
-                'campaign_limit' => 3,
+                'name' => 'Explorer',
+                'price' => 0.00,
+                'campaign_limit' => 0,
                 'status' => 1,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
             \Illuminate\Support\Facades\DB::table('plans')->updateOrInsert(['id' => 2], [
+                'name' => 'Starter',
+                'price' => 49.00,
+                'campaign_limit' => 1,
+                'status' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            \Illuminate\Support\Facades\DB::table('plans')->updateOrInsert(['id' => 3], [
                 'name' => 'Professional',
                 'price' => 99.00,
                 'campaign_limit' => -1,

@@ -186,6 +186,8 @@ class ManageInfluencerController extends Controller
             'engagement' => 'nullable|string',
             'avg_views' => 'nullable|string',
             'primary_gender' => 'nullable|string',
+            'is_gst_registered' => 'nullable|in:on,off',
+            'gst_number' => 'nullable|string|max:40',
         ]);
 
         $exists = Influencer::where('mobile', $request->mobile)->where('dial_code', $dialCode)->where('id', '!=', $influencer->id)->exists();
@@ -201,6 +203,8 @@ class ManageInfluencerController extends Controller
         $influencer->engagement = $request->engagement;
         $influencer->avg_views = $request->avg_views;
         $influencer->primary_gender = $request->primary_gender;
+        $influencer->is_gst_registered = $request->is_gst_registered == 'on' ? 1 : 0;
+        $influencer->gst_number = $request->gst_number;
 
         $influencer->address = $request->address;
         $influencer->city = $request->city;

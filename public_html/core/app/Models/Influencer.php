@@ -33,6 +33,7 @@ class Influencer extends Authenticatable
         'ver_code_send_at' => 'datetime',
         'skills'            => 'object',
         'languages'         => 'array',
+        'is_gst_registered' => 'boolean',
     ];
 
 

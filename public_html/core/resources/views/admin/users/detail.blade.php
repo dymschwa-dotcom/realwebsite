@@ -221,6 +221,23 @@
                                     </select>
                                 </div>
                             </div>
+                            
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>@lang('GST Registered')</label>
+                                    <input type="checkbox" data-width="100%" data-onstyle="-success"
+                                           data-offstyle="-danger" data-bs-toggle="toggle" data-on="@lang('Yes')"
+                                           data-off="@lang('No')" name="is_gst_registered"
+                                           @if ($user->is_gst_registered) checked @endif>
+                                </div>
+                            </div>
+
+                            <div class="col-md-12 gst-number-wrapper" @if(!$user->is_gst_registered) style="display: none;" @endif>
+                                <div class="form-group">
+                                    <label>@lang('GST Number')</label>
+                                    <input class="form-control" type="text" name="gst_number" value="{{ $user->gst_number }}">
+                                </div>
+                            </div>
                         </div>
                         <div class="row">
                             <div class="col-xl-4 col-md-6 col-12">
@@ -375,6 +392,14 @@
             let mobileElement = $('.mobile-code');
             $('select[name=country]').on('change', function() {
                 mobileElement.text(`+${$('select[name=country] :selected').data('mobile_code')}`);
+            });
+            
+            $('input[name=is_gst_registered]').on('change', function() {
+                if ($(this).is(':checked')) {
+                    $('.gst-number-wrapper').slideDown();
+                } else {
+                    $('.gst-number-wrapper').slideUp();
+                }
             });
 
         })(jQuery);

@@ -47,17 +47,39 @@ class ParticipantController extends Controller {
         }
 
         $brand    = auth()->user();
+        if(!$brand->address || !$brand->tax_number) {
+            session()->put('redirect_after_profile_completion', url()->previous());
+            $notify[] = ['error', 'Please complete your business profile (Address and Tax ID) in settings before hiring.'];
+            return to_route('user.profile.setting')->withNotify($notify);
+        }
+        
         $campaign = $participant->campaign;
 
         $general     = gs();
         $commission  = ($participant->budget * $general->brand_campaign_commission) / 100;
-        $totalAmount = $participant->budget + $commission;
+        
+        $gstOnCommission = ($commission * $general->marketplace_commission_gst_rate) / 100;
+        $gstOnService = ($participant->budget * $general->influencer_gst_rate) / 100;
+        $gstAmount = $gstOnCommission + $gstOnService;
+        
+        $totalAmount = $participant->budget + $commission + $gstAmount;
+        
         if ($totalAmount > $brand->balance) {
-            $notify[] = ['error', 'Insufficient balance in your account'];
-            return back()->withNotify($notify);
+            $notify[] = ['info', 'Redirecting to secure checkout to complete hiring'];
+            return to_route('user.deposit.index', [
+                'amount'              => getAmount($totalAmount),
+                'price'               => getAmount($participant->budget),
+                'service_fee'         => getAmount($commission),
+                'gst_amount'          => getAmount($gstAmount),
+                'success_action'      => 'hire_influencer',
+                'success_action_data' => json_encode(['participant_id' => $id])
+            ])->withNotify($notify);
         }
 
         $participant->status = Status::PARTICIPATE_REQUEST_ACCEPTED;
+        $participant->gst_amount = $gstAmount;
+        $participant->influencer_is_gst_registered = $influencer->is_gst_registered;
+        $participant->influencer_country_code = $influencer->country_code;
         $participant->save();
 
         $influencer = $participant->influencer;
@@ -71,8 +93,9 @@ class ParticipantController extends Controller {
             $transaction->amount       = $totalAmount;
             $transaction->post_balance = $brand->balance;
             $transaction->charge       = $commission;
+            $transaction->gst_amount   = $gstAmount;
             $transaction->trx_type     = '-';
-            $transaction->details      = 'Accepted the influencer for the campaign';
+            $transaction->details      = 'Accepted the influencer for the campaign (Incl. GST)';
             $transaction->trx          = getTrx();
             $transaction->remark       = 'campaign';
             $transaction->save();
@@ -93,7 +116,7 @@ class ParticipantController extends Controller {
             'brand'              => $brand->username,
             'participant_number' => $participant->participant_number,
             'title'              => $campaign->title,
-        );
+        ]);
 
         recentActivity('You have accepted the ' . $influencer->username . ' participation request', $brand->id);
         recentActivity($brand->username . ' has accepted your participant request', 0, $influencer->id);
@@ -134,6 +157,26 @@ class ParticipantController extends Controller {
     public function completed($id) {
         $participant         = Participant::delivered()->authCampaign()->with('influencer')->findOrFail($id);
         $participant->status = Status::CAMPAIGN_JOB_COMPLETED;
+        
+        $general = gs();
+        
+        // Calculate Marketplace Commission GST
+        $commission = ($participant->budget * $general->influencer_campaign_commission) / 100;
+        $commissionGst = ($commission * $general->marketplace_commission_gst_rate) / 100;
+        
+        // Calculate Influencer Service GST
+            $influencerGst = ($participant->budget * $general->influencer_gst_rate) / 100;
+        
+        // Calculate 8.5% Return if not GST registered
+        $gstReturn = 0;
+        if (!$participant->influencer->is_gst_registered && $participant->influencer->country_code == 'NZ') {
+            $gstReturn = ($participant->budget * $general->marketplace_gst_return_rate) / 100;
+        }
+        
+        $participant->commission_gst_amount         = $commissionGst;
+        $participant->influencer_gst_amount         = $influencerGst;
+        $participant->marketplace_gst_return_amount = $gstReturn;
+        
         $participant->save();
         $participant->campaign->status = Status::CAMPAIGN_COMPLETED; // This ensures the Campaign Dashboard shows 'Completed'
         $participant->campaign->save();
@@ -141,9 +184,12 @@ class ParticipantController extends Controller {
         $influencer = $participant->influencer;
         $campaign   = $participant->campaign;
 
-        $general       = gs();
-        $commission    = ($participant->budget * $general->influencer_campaign_commission) / 100;
         $payableAmount = $participant->budget - $commission;
+        
+        // Handle 8.5% return logic: Only add it if NOT registered and setting says to
+        if (!$participant->influencer->is_gst_registered && $participant->influencer->country_code == 'NZ' && $general->marketplace_gst_return_to == 1) { // To Influencer
+            $payableAmount += $gstReturn;
+        }
 
         if ($campaign->payment_type == 'paid') {
             $influencer->balance += $payableAmount;
@@ -160,6 +206,9 @@ class ParticipantController extends Controller {
             $transaction->charge        = $commission;
             $transaction->trx_type      = '+';
             $transaction->details       = 'Campaign job completed';
+            if (!$participant->influencer->is_gst_registered && $participant->influencer->country_code == 'NZ' && $general->marketplace_gst_return_to == 1) {
+                $transaction->details .= ' (Incl. GST Return)';
+            }
             $transaction->trx           = getTrx();
             $transaction->remark        = 'campaign_completed';
             $transaction->save();
@@ -218,12 +267,37 @@ class ParticipantController extends Controller {
         $package = \App\Models\InfluencerPackage::findOrFail($id);
         $brand   = auth()->user();
 
+        if ($brand->plan_id == 1) {
+            $notify[] = ['error', 'Please upgrade your plan to purchase services.'];
+            return to_route('pricing')->withNotify($notify);
+        }
+        
+        if(!$brand->address || !$brand->tax_number) {
+            session()->put('redirect_after_profile_completion', url()->previous());
+            $notify[] = ['error', 'Please complete your business profile (Address and Tax ID) in settings before purchasing.'];
+            return to_route('user.profile.setting')->withNotify($notify);
+        }
+
         $general     = gs();
         $commission  = ($package->price * $general->brand_campaign_commission) / 100;
-        $totalAmount = $package->price + $commission;
+        
+        $gstOnCommission = ($commission * $general->marketplace_commission_gst_rate) / 100;
+        
+        $gstOnService = ($package->price * $general->influencer_gst_rate) / 100;
+
+        $gstAmount = $gstOnCommission + $gstOnService;
+        $totalAmount = $package->price + $commission + $gstAmount;
+        
         if ($brand->balance < $totalAmount) {
-            $notify[] = ['error', 'Insufficient balance to purchase this service'];
-            return back()->withNotify($notify);
+            $notify[] = ['info', 'Redirecting to secure checkout to complete purchase'];
+            return to_route('user.deposit.index', [
+                'amount'              => getAmount($totalAmount),
+                'price'               => getAmount($package->price),
+                'service_fee'         => getAmount($commission),
+                'gst_amount'          => getAmount($gstAmount),
+                'success_action'      => 'buy_service',
+                'success_action_data' => json_encode(['package_id' => $id])
+            ])->withNotify($notify);
         }
 
         $influencer = \App\Models\Influencer::active()->findOrFail($package->influencer_id);
@@ -281,6 +355,9 @@ class ParticipantController extends Controller {
         $participant->budget             = $package->price;
         $participant->status             = Status::PARTICIPATE_REQUEST_ACCEPTED;
         $participant->participant_number = getTrx();
+        $participant->gst_amount         = $gstAmount;
+        $participant->influencer_is_gst_registered = $influencer->is_gst_registered;
+        $participant->influencer_country_code = $influencer->country_code;
         $participant->save();
 
         // 3. Deduct Balance & Create Transaction
@@ -292,8 +369,9 @@ class ParticipantController extends Controller {
         $transaction->amount       = $totalAmount;
         $transaction->post_balance = $brand->balance;
         $transaction->charge       = $commission;
+        $transaction->gst_amount   = $gstAmount;
         $transaction->trx_type     = '-';
-        $transaction->details      = 'Purchased service: ' . $package->name;
+        $transaction->details      = 'Purchased service: ' . $package->name . ' (Incl. GST)';
         $transaction->trx          = getTrx();
         $transaction->remark       = 'service_purchase';
         $transaction->save();
@@ -307,7 +385,7 @@ class ParticipantController extends Controller {
             'post_balance'       => showAmount($brand->balance),
             'trx'                => $transaction->trx,
             'participant_number' => $participant->participant_number,
-        );
+        ]);
 
         notify($influencer, 'PARTICIPATE_REQUEST_ACCEPTED', [
             'influencer'         => $influencer->username,
@@ -334,12 +412,36 @@ class ParticipantController extends Controller {
             })->findOrFail($id);
         $brand = auth()->user();
 
+        if ($brand->plan_id == 1) {
+            $notify[] = ['error', 'Please upgrade your plan to hire influencers.'];
+            return to_route('pricing')->withNotify($notify);
+        }
+        
+        if(!$brand->address || !$brand->tax_number) {
+            session()->put('redirect_after_profile_completion', url()->previous());
+            $notify[] = ['error', 'Please complete your business profile (Address and Tax ID) in settings before hiring.'];
+            return to_route('user.profile.setting')->withNotify($notify);
+        }
+
         $general     = gs();
         $commission  = ($request->budget * $general->brand_campaign_commission) / 100;
-        $totalAmount = $request->budget + $commission;
+        
+        $gstOnCommission = ($commission * $general->marketplace_commission_gst_rate) / 100;
+        $gstOnService = ($request->budget * $general->influencer_gst_rate) / 100;
+        $gstAmount = $gstOnCommission + $gstOnService;
+        
+        $totalAmount = $request->budget + $commission + $gstAmount;
+        
         if ($brand->balance < $totalAmount) {
-            $notify[] = ['error', 'Insufficient balance'];
-            return back()->withNotify($notify);
+            $notify[] = ['info', 'Redirecting to secure checkout to complete hiring'];
+            return to_route('user.deposit.index', [
+                'amount'              => getAmount($totalAmount),
+                'price'               => getAmount($request->budget),
+                'service_fee'         => getAmount($commission),
+                'gst_amount'          => getAmount($gstAmount),
+                'success_action'      => 'hire_from_inquiry',
+                'success_action_data' => json_encode(['participant_id' => $id, 'budget' => $request->budget])
+            ])->withNotify($notify);
         }
 
         // 1. Update Campaign Budget
@@ -348,8 +450,11 @@ class ParticipantController extends Controller {
         $campaign->save();
 
         // 2. Update Participant
-        $participant->budget = $request->budget;
-        $participant->status = Status::PARTICIPATE_REQUEST_ACCEPTED;
+        $participant->budget     = $request->budget;
+                $participant->status = Status::PARTICIPATE_REQUEST_ACCEPTED;
+        $participant->gst_amount = $gstAmount;
+        $participant->influencer_is_gst_registered = $participant->influencer->is_gst_registered;
+        $participant->influencer_country_code = $participant->influencer->country_code;
         $participant->save();
 
         // 3. Deduct Balance & Create Transaction
@@ -361,13 +466,29 @@ class ParticipantController extends Controller {
         $transaction->amount       = $totalAmount;
         $transaction->post_balance = $brand->balance;
         $transaction->charge       = $commission;
+        $transaction->gst_amount   = $gstAmount;
         $transaction->trx_type     = '-';
-        $transaction->details      = 'Hired from inquiry: ' . $campaign->title;
+        $transaction->details      = 'Hired from inquiry: ' . $campaign->title . ' (Incl. GST)';
         $transaction->trx          = getTrx();
         $transaction->remark       = 'service_purchase';
         $transaction->save();
 
         $notify[] = ['success', 'Influencer hired successfully!'];
+        return back()->withNotify($notify);
+    }
+
+    public function closeInquiry($id) {
+        $participant = Participant::where('status', Status::PARTICIPATE_INQUIRY)->findOrFail($id);
+
+        // 1. Mark the participant (job) as completed
+        $participant->status = Status::CAMPAIGN_JOB_COMPLETED;
+        $participant->save();
+
+        // 2. Mark the shadow campaign as completed
+        $participant->campaign->status = Status::CAMPAIGN_COMPLETED;
+        $participant->campaign->save();
+
+        $notify[] = ['success', 'Inquiry closed and archived successfully'];
         return back()->withNotify($notify);
     }
 
@@ -381,7 +502,6 @@ class ParticipantController extends Controller {
             'video_length'  => 'nullable|integer|min:0',
             'description'   => 'required|string',
         ]);
-
         $participant = Participant::where('status', Status::PARTICIPATE_INQUIRY)
             ->where('influencer_id', auth()->guard('influencer')->id())
             ->findOrFail($id);
@@ -416,7 +536,7 @@ class ParticipantController extends Controller {
             $campaign->content_requirements = [
                 $countKey             => $request->post_count ?? 1,
                 'video_length'        => $request->video_length,
-                $pName . '_type'      => [$pName == 'instagram' || $pName == 'facebook' ? 'photo' : 'video',
+                $pName . '_type'      => [$pName == 'instagram' || $pName == 'facebook' ? 'photo' : 'video'],
                 $pName . '_placement' => ['post']
             ];
         } else {
@@ -453,12 +573,36 @@ class ParticipantController extends Controller {
 
         $brand = auth()->user();
 
+        if ($brand->plan_id == 1) {
+            $notify[] = ['error', 'Please upgrade your plan to accept proposals.'];
+            return to_route('pricing')->withNotify($notify);
+        }
+        
+        if(!$brand->address || !$brand->tax_number) {
+            session()->put('redirect_after_profile_completion', url()->previous());
+            $notify[] = ['error', 'Please complete your business profile (Address and Tax ID) in settings before accepting a proposal.'];
+            return to_route('user.profile.setting')->withNotify($notify);
+        }
+
         $general     = gs();
         $commission  = ($proposal->budget * $general->brand_campaign_commission) / 100;
-        $totalAmount = $proposal->budget + $commission;
+        
+        $gstOnCommission = ($commission * $general->marketplace_commission_gst_rate) / 100;
+        $gstOnService = ($proposal->budget * $general->influencer_gst_rate) / 100;
+        $gstAmount = $gstOnCommission + $gstOnService;
+        
+        $totalAmount = $proposal->budget + $commission + $gstAmount;
+        
         if ($brand->balance < $totalAmount) {
-            $notify[] = ['error', 'Insufficient balance to accept this proposal'];
-            return back()->withNotify($notify);
+            $notify[] = ['info', 'Redirecting to secure checkout to complete hiring'];
+            return to_route('user.deposit.index', [
+                'amount'              => getAmount($totalAmount),
+                'price'               => getAmount($proposal->budget),
+                'service_fee'         => getAmount($commission),
+                'gst_amount'          => getAmount($gstAmount),
+                'success_action'      => 'accept_proposal',
+                'success_action_data' => json_encode(['proposal_id' => $id])
+            ])->withNotify($notify);
         }
 
         // 1. Deduct Balance & Create Transaction
@@ -470,25 +614,66 @@ class ParticipantController extends Controller {
         $transaction->amount       = $totalAmount;
         $transaction->post_balance = $brand->balance;
         $transaction->charge       = $commission;
+        $transaction->gst_amount   = $gstAmount;
         $transaction->trx_type     = '-';
-        $transaction->details      = 'Accepted proposal: ' . $proposal->campaign->title;
+        $transaction->details      = 'Accepted proposal: ' . $proposal->campaign->title . ' (Incl. GST)';
         $transaction->trx          = getTrx();
         $transaction->remark       = 'proposal_acceptance';
         $transaction->save();
 
         // 2. Move to Accepted Status
-        $proposal->status = Status::PARTICIPATE_REQUEST_ACCEPTED;
+        $proposal->status     = Status::PARTICIPATE_REQUEST_ACCEPTED;
+        $proposal->gst_amount = $gstAmount;
+        $proposal->influencer_is_gst_registered = $proposal->influencer->is_gst_registered;
+        $proposal->influencer_country_code = $proposal->influencer->country_code;
         $proposal->save();
 
-        // 3. Mark the original inquiry as completed/archived if this was part of a thread
-        // For now, we just redirect to the new active job detail
+        // 3. Auto-Archive: Close any open "General Inquiry" threads between these two users
+        // This moves them from 'Inquiry' tab to 'Closed' tab as "Resolved"
+        Participant::where('influencer_id', $proposal->influencer_id)
+            ->where('status', Status::PARTICIPATE_INQUIRY)
+            ->whereHas('campaign', function($q) use ($brand) {
+                $q->where('user_id', $brand->id);
+            })
+            ->update(['status' => Status::CAMPAIGN_JOB_COMPLETED]);
+
         $notify[] = ['success', 'Proposal accepted and hired!'];
-        // Redirect to user.participant.detail
-        return to_route('user.participant.detail', $proposal->id)->withNotify($notify);
+        // Redirect to conversation inbox (workspace) instead of detail
+        return to_route('user.participant.conversation.inbox', $proposal->id)->withNotify($notify);
+    }
+
+    public function rejectProposal($id) {
+        $proposal = Participant::where('status', Status::PARTICIPATE_PROPOSAL)
+            ->whereHas('campaign', function($q) {
+                $q->where('user_id', auth()->id());
+            })->findOrFail($id);
+
+        $proposal->status = Status::PARTICIPATE_REQUEST_REJECTED;
+        $proposal->save();
+
+        // Also mark the shadow campaign as cancelled so it doesn't clutter
+        $proposal->campaign->status = Status::CAMPAIGN_JOB_CANCELED;
+        $proposal->campaign->save();
+
+        notify($proposal->influencer, 'PARTICIPATE_REQUEST_REJECTED', [
+            'influencer'         => $proposal->influencer->username,
+            'brand'              => auth()->user()->username,
+            'participant_number' => $proposal->participant_number,
+            'title'              => $proposal->campaign->title,
+        ]);
+
+        $notify[] = ['success', 'Proposal rejected successfully'];
+        return back()->withNotify($notify);
     }
 
     public function createInquiry($influencerId) {
         $brand      = auth()->user();
+
+        if ($brand->plan_id == 1) {
+            $notify[] = ['error', 'Please upgrade your plan to message influencers.'];
+            return to_route('pricing')->withNotify($notify);
+        }
+
         $influencer = \App\Models\Influencer::active()->findOrFail($influencerId);
 
         // Check if an inquiry or participant already exists between them for a "General" purpose
@@ -496,7 +681,9 @@ class ParticipantController extends Controller {
         $existing = Participant::where('influencer_id', $influencer->id)
             ->whereHas('campaign', function($q) use ($brand) {
                 $q->where('user_id', $brand->id)->where('title', 'LIKE', 'General Inquiry%');
-            })->first();
+            })
+            ->whereNotIn('status', [Status::CAMPAIGN_JOB_COMPLETED, Status::CAMPAIGN_JOB_CANCELED, Status::CAMPAIGN_JOB_REFUNDED, Status::PARTICIPATE_REQUEST_REJECTED])
+            ->first();
 
         if ($existing) {
             return to_route('user.participant.conversation.inbox', $existing->id);
@@ -540,4 +727,5 @@ class ParticipantController extends Controller {
         return to_route('user.participant.conversation.inbox', $participant->id);
     }
 }
+
 
