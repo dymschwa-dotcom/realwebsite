@@ -43,4 +43,9 @@ RUN chown -R www-data:www-data /var/www/html \
 # 8. Set working directory
 WORKDIR /var/www/html/core
 
+# 9. Install Composer dependencies
+RUN composer install --no-interaction --optimize-autoloader --no-dev
+
+# 10. Final setup
+WORKDIR /var/www/html
 
