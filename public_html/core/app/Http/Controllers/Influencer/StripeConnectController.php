@@ -44,7 +44,12 @@ class StripeConnectController extends Controller
                 $influencer->save();
             }
 
-            // 2. Create the Account Link (The Onboarding URL)
+            // 2. If already onboarded, generate a Login Link to the Express Dashboard
+            if ($influencer->stripe_onboarded) {
+                $loginLink = Account::createLoginLink($influencer->stripe_account_id);
+                return redirect($loginLink->url);
+            }
+            // 3. Otherwise, create the Account Link (The Onboarding URL)
             $accountLink = AccountLink::create([
                 'account' => $influencer->stripe_account_id,
                 'refresh_url' => route('influencer.payment.stripe.connect'), // Restart if it expires
