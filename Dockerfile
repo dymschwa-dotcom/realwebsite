@@ -35,7 +35,7 @@ COPY ./public_html /var/www/html/
 
 # Create a physical .env file so the app doesn't redirect to /install
 # We copy the example file so it's not empty, satisfying the app's check
-RUN cp /var/www/html/core/.env.example /var/www/html/core/.env
+RUN cp /var/www/html/core/.env/var/www/html/core/.env
 
 # 7. Set the correct permissions for Laravel/PHP
 # In cPanel, permissions are often loose. In Docker, we need precision.
@@ -53,4 +53,3 @@ RUN composer install --no-interaction --optimize-autoloader --no-dev
 # 10. Final setup
 WORKDIR /var/www/html
 
-#
