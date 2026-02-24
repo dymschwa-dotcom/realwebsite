@@ -45,7 +45,7 @@ class ProcessController extends Controller
                 'mode' => 'payment',
                 'cancel_url' => $deposit->failed_url ? (str_starts_with($deposit->failed_url, 'http') ? $deposit->failed_url : route('home').$deposit->failed_url) : route('home').'/user/deposit/history',
                 'success_url' => $deposit->success_url ? (str_starts_with($deposit->success_url, 'http') ? $deposit->success_url : route('home').$deposit->success_url) : route('home').'/user/deposit/history',
-            );
+            ]);
         } catch (\Exception $e) {
             $send['error'] = true;
             $send['message'] = $e->getMessage();
