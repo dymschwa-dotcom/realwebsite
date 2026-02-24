@@ -35,7 +35,7 @@ COPY ./public_html /var/www/html/
 
 # Create a physical .env file so the app doesn't redirect to /install
 # We copy the example file so it's not empty, satisfying the app's check
-RUN cp /var/www/html/core/.env.example/var/www/html/core/.env
+RUN cp /var/www/html/core/.env.example /var/www/html/core/.env
 
 RUN touch /var/www/html/core/storage/installed
 
