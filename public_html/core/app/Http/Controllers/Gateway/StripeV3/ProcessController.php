@@ -25,6 +25,11 @@ class ProcessController extends Controller
                 'tax_id_collection' => [
                     'enabled' => true,
                 ],
+                'metadata' => [
+                    'trx' => $deposit->trx,
+                    'success_action' => $deposit->success_action,
+                    'success_action_data' => $deposit->success_action_data,
+                ],
                 'line_items' => [[
                     'price_data'=>[
                         'unit_amount' => round($deposit->final_amount,2) * 100,
@@ -38,9 +43,9 @@ class ProcessController extends Controller
                     'quantity' => 1,
                 ]],
                 'mode' => 'payment',
-                'cancel_url' => route('home').$deposit->failed_url,
-                'success_url' => route('home').$deposit->success_url,
-            ]);
+                'cancel_url' => $deposit->failed_url ? (str_starts_with($deposit->failed_url, 'http') ? $deposit->failed_url : route('home').$deposit->failed_url) : route('home').'/user/deposit/history',
+                'success_url' => $deposit->success_url ? (str_starts_with($deposit->success_url, 'http') ? $deposit->success_url : route('home').$deposit->success_url) : route('home').'/user/deposit/history',
+            );
         } catch (\Exception $e) {
             $send['error'] = true;
             $send['message'] = $e->getMessage();
@@ -90,7 +95,15 @@ class ProcessController extends Controller
             $session = $event->data->object;
             $deposit = Deposit::where('btc_wallet',  $session->id)->orderBy('id', 'DESC')->first();
 
-            if($deposit->status==Status::PAYMENT_INITIATE){
+            if($deposit && $deposit->status==Status::PAYMENT_INITIATE){
+
+                // Restore metadata to deposit so userDataUpdate knows what to do
+                if (isset($session->metadata->success_action)) {
+                    $deposit->success_action = $session->metadata->success_action;
+                    $deposit->success_action_data = $session->metadata->success_action_data;
+                    $deposit->save();
+                }
+
                 // Capture Stripe details before updating user data
                 $user = $deposit->user;
                 if ($user) {

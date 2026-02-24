@@ -31,6 +31,8 @@ class PaymentController extends Controller
             'currency' => 'required',
             'success_action'      => 'nullable|string',
             'success_action_data' => 'nullable|string',
+            'gst_amount'          => 'nullable|numeric',
+            'service_fee'         => 'nullable|numeric',
         ]);
 
 
@@ -39,7 +41,7 @@ class PaymentController extends Controller
             $gate->where('status', Status::ENABLE);
         })->where('method_code', $request->gateway)->where('currency', $request->currency)->first();
         if (!$gate) {
-            $notify[] = ['error', 'Invalid gateway'];
+            $notify[] = ['error', 'Invalid gateway';
             return back()->withNotify($notify);
         }
 
@@ -71,10 +73,16 @@ class PaymentController extends Controller
             $data->success_url = urlPath('user.participant.detail', $actionData['participant_id']);
         } elseif ($request->success_action == 'buy_service') {
             $data->success_url = urlPath('user.participant.index'); // Redirect to orders list
+        } elseif ($request->success_action == 'accept_proposal') {
+            $actionData = json_decode($request->success_action_data, true);
+            // Redirect back to the conversation inbox as requested
+            $data->success_url = urlPath('user.participant.conversation.inbox', @$actionData['proposal_id'] ?? '');
         }
 
         $data->success_action      = $request->success_action;
         $data->success_action_data = $request->success_action_data;
+        $data->gst_amount          = $request->gst_amount ?? 0;
+        $data->service_fee         = $request->service_fee ?? 0;
 
         $data->save();
         session()->put('Track', $data->trx);
@@ -146,6 +154,8 @@ class PaymentController extends Controller
 
             $transaction->trx = $deposit->trx;
             $transaction->remark = 'deposit';
+            $transaction->gst_amount = $deposit->gst_amount;
+            $transaction->service_fee = $deposit->service_fee;
             $transaction->save();
 
             if ($deposit->success_action) {
