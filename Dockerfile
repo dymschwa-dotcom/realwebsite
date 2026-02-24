@@ -33,6 +33,10 @@ RUN a2enmod rewrite
 # 6. Copy your local website files into the web server's folder inside Docker
 COPY ./public_html /var/www/html/
 
+# Create a physical .env file so the app doesn't redirect to /install
+# We copy the example file so it's not empty, satisfying the app's check
+RUN cp /var/www/html/core/.env.example /var/www/html/core/.env
+
 # 7. Set the correct permissions for Laravel/PHP
 # In cPanel, permissions are often loose. In Docker, we need precision.
 RUN chown -R www-data:www-data /var/www/html \
