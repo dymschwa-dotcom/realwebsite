@@ -84,6 +84,7 @@ class PaymentController extends Controller
         $data->gst_amount          = $request->gst_amount ?? 0;
         $data->service_fee         = $request->service_fee ?? 0;
 
+        // Add this to ensure the description includes the GST/Fee info for the gateway
         $data->save();
         session()->put('Track', $data->trx);
         return to_route('user.deposit.confirm');
@@ -247,7 +248,7 @@ class PaymentController extends Controller
             'charge' => showAmount($data->charge,currencyFormat:false),
             'rate' => showAmount($data->rate,currencyFormat:false),
             'trx' => $data->trx
-        ]);
+        );
 
         $notify[] = ['success', 'You have deposit request has been taken'];
         return to_route('user.deposit.history')->withNotify($notify);

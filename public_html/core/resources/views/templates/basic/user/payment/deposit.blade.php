@@ -15,6 +15,8 @@
         <input name="success_action" type="hidden" value="{{ request()->success_action }}">
         <input name="success_action_data" type="hidden" value="{{ request()->success_action_data }}">
         <input name="amount" type="hidden" value="{{ request()->amount }}">
+        <input name="gst_amount" type="hidden" value="{{ request()->gst_amount }}">
+        <input name="service_fee" type="hidden" value="{{ request()->service_fee }}">
         <div class="gateway-card">
             <div class="row justify-content-center gy-sm-4 gy-3">
                 <div class="col-lg-6 @if(request()->direct_checkout) d-none @endif">
