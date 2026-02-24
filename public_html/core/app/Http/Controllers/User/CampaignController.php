@@ -199,20 +199,6 @@ class CampaignController extends Controller {
 
         if ($request->hasFile('image')) {
             try {
-                $campaign->image = fileUploader($request->image, getFilePath('campaign'), getFileSize('campaign'), @$campaign->image);
-            } catch (\Exception $e) {
-                return ['status' => true, 'message' => 'Image could not be uploaded'];
-            }
-        }
-        
-        $user = auth()->user();
-        if(!$user->address || !$user->tax_number) {
-            session()->put('redirect_after_profile_completion', url()->previous());
-            return ['status' => true, 'message' => 'Please complete your business profile (Address and Tax ID) in settings before creating a campaign.'];
-        }
-
-        if ($request->hasFile('content') && $request->content_creator == 'yourself') {
-            try {
                 $campaign->content = fileUploader($request->content, getFilePath('content'), null, @$campaign->content);
             } catch (\Exception $e) {
                 return ['status' => true, 'message' => 'File could not be uploaded'];

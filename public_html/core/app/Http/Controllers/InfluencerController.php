@@ -56,48 +56,32 @@ class InfluencerController extends Controller {
         return view('Template::influencer_profile', compact('pageTitle', 'influencer', 'reviews', 'topRatedInfluencer', 'favoriteInfluencer', 'completedCampaign', 'seoContents', 'seoImage'));
     }
 
-    protected function filterInfluencer() {
+        protected function filterInfluencer() {
         $influencer = Influencer::active();
         $request    = request();
-        if ($request->platform) {
-            $influencer->whereHas('socialLink.platform', function ($query) use ($request) {
-                $query->where('name', $request->platform);
+
+        // 1. PLATFORMS (Combinable)
+        $platforms = array_filter(array_unique((array)$request->platform_name));
+        if ($request->platform) $platforms[] = $request->platform;
+        
+        if (!empty($platforms)) {
+            $platformIds = Platform::active()->whereIn('name', $platforms)->pluck('id')->toArray();
+            $influencer->whereHas('socialLink', function ($q) use ($platformIds) {
+                $q->whereIn('platform_id', $platformIds)->where('followers', '>', 0);
             });
         }
 
+        // 2. CATEGORIES (Combinable)
         if ($request->category) {
-            $categories = Category::active()->whereIn('slug', (array) $request->category)->select('id')->get();
-            if ($categories->count()) {
-                $categoryIds = $categories->pluck('id')->toArray();
-                $influencer->whereHas('categories', function ($query) use ($categoryIds) {
-                    $query->whereIn('influencer_categories.category_id', $categoryIds);
-                });
-            }
+            $categoryIds = Category::active()->whereIn('slug', (array)$request->category)->pluck('id')->toArray();
+            $influencer->whereHas('categories', function ($q) use ($categoryIds) {
+                $q->whereIn('influencer_categories.category_id', $categoryIds);
+            });
         }
-        if ($request->country) {
-            $countries = (array) $request->country;
-            $influencer->whereIn('country_name', $countries);
-        }
-        if ($request->region) {
-            $regions = (array) $request->region;
-            $influencer->whereIn('region', $regions);
-        }
-        if ($request->city) {
-            $cities = (array) $request->city;
-            $influencer->whereIn('city', $cities);
-        }
-        if ($request->platform_name) {
-            $filterPlatforms = Platform::active()->whereIn('name', (array) $request->platform_name)->select('id')->get();
-            if ($filterPlatforms->count()) {
-                $platformIds = $filterPlatforms->pluck('id')->toArray();
-                $influencer->whereHas('socialLink', function ($query) use ($platformIds) {
-                    $query->whereIn('platform_id', $platformIds)->where('followers', '>', 0);
-                });
-            }
 
-        }
+        // 3. FOLLOWER RANGE (Combinable)
         if ($request->follower_range) {
-            $ranges = (array) $request->follower_range;
+            $ranges = (array)$request->follower_range;
             $influencer->whereHas('socialLink', function ($query) use ($ranges) {
                 $query->where(function ($q) use ($ranges) {
                     foreach ($ranges as $range) {
@@ -106,9 +90,7 @@ class InfluencerController extends Controller {
                         } else {
                             $parts = explode('_', $range);
                             if (count($parts) == 2) {
-                                $start = $parts[0] * 1000;
-                                $end   = $parts[1] * 1000;
-                                $q->orWhereBetween('followers', [$start, $end]);
+                                $q->orWhereBetween('followers', [$parts[0] * 1000, $parts[1] * 1000]);
                             }
                         }
                     }
@@ -116,22 +98,27 @@ class InfluencerController extends Controller {
             });
         }
 
+        // 4. GENDER (Combinable)
+        if ($request->gender) {
+            $influencer->whereIn('gender', (array)$request->gender);
+        }
+
+        // 5. LOCATION (Combinable)
+        if ($request->country) $influencer->whereIn('country_name', (array)$request->country);
+        if ($request->region) $influencer->whereIn('region', (array)$request->region);
+        if ($request->city) $influencer->whereIn('city', (array)$request->city);
+
+        // 6. PRICE
         if ($request->min_price || $request->max_price) {
             $influencer->whereHas('packages', function ($query) use ($request) {
-                if ($request->min_price) {
-                    $query->where('price', '>=', $request->min_price);
-                }
-                if ($request->max_price) {
-                    $query->where('price', '<=', $request->max_price);
-                }
+                if ($request->min_price) $query->where('price', '>=', $request->min_price);
+                if ($request->max_price) $query->where('price', '<=', $request->max_price);
             });
         }
 
-        if ($request->rating) {
-            $influencer = $influencer->where('rating', '>=', $request->rating);
-        }
+        // 7. AGE (Combinable)
         if ($request->age_range) {
-            $ranges = (array) $request->age_range;
+            $ranges = (array)$request->age_range;
             $influencer->where(function ($q) use ($ranges) {
                 foreach ($ranges as $range) {
                     if ($range == '45_100') {
@@ -145,21 +132,10 @@ class InfluencerController extends Controller {
                 }
             });
         }
-        if ($request->skill) {
-            $influencer->whereJsonContains('skills', $request->skill);
-        }
+
+        if ($request->rating) $influencer->where('rating', '>=', $request->rating);
+        if ($request->skill) $influencer->whereJsonContains('skills', $request->skill);
+
         return $influencer;
     }
-
-    public function reviews(Request $request) {
-        $lastId  = $request->last_id;
-        $reviews = Review::where('influencer_id', $request->influencer_id)->where('id', '<', $lastId)->orderBy('id', 'desc')->with('user')->limit(5)->get();
-        if (blank($reviews)) {
-            return response()->json(['error' => 'No more reviews yet']);
-        }
-        $html   = view('Template::partials.reviews', compact('reviews'))->render();
-        $lastId = $reviews->last()->id;
-        return response()->json(['html' => $html, 'lastId' => $lastId]);
-    }
 }
-

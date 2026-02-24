@@ -17,6 +17,8 @@ Route::controller('TicketController')->prefix('ticket')->name('ticket.')->group(
     Route::get('download/{attachment_id}', 'ticketDownload')->name('download');
 });
 
+Route::post('stripe-webhook', 'StripeWebhookController@handle')->name('stripe.webhook');
+
 Route::controller('CampaignController')->prefix('campaigns')->name('campaign.')->group(function () {
     Route::middleware(['influencer'])->group(function () {
     Route::get('/', 'all')->name('all');

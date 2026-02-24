@@ -66,6 +66,13 @@ class PaymentController extends Controller
         $data->success_url = urlPath('user.deposit.history');
         $data->failed_url = urlPath('user.deposit.history');
 
+        if ($request->success_action == 'hire_influencer') {
+            $actionData = json_decode($request->success_action_data, true);
+            $data->success_url = urlPath('user.participant.detail', $actionData['participant_id']);
+        } elseif ($request->success_action == 'buy_service') {
+            $data->success_url = urlPath('user.participant.index'); // Redirect to orders list
+        }
+
         $data->success_action      = $request->success_action;
         $data->success_action_data = $request->success_action_data;
 
@@ -127,7 +134,16 @@ class PaymentController extends Controller
             $transaction->post_balance = $user->balance;
             $transaction->charge = $deposit->charge;
             $transaction->trx_type = '+';
-            $transaction->details = 'Deposit Via ' . $methodName;
+
+            // Professional Detail for Direct Checkout
+                    if ($deposit->success_action == 'hire_influencer') {
+                $transaction->details = 'Payment for Influencer Hire via ' . $methodName;
+                    } elseif ($deposit->success_action == 'buy_service') {
+                $transaction->details = 'Payment for Service Purchase via ' . $methodName;
+            } else {
+                $transaction->details = 'Deposit Via ' . $methodName;
+            }
+
             $transaction->trx = $deposit->trx;
             $transaction->remark = 'deposit';
             $transaction->save();
@@ -136,7 +152,6 @@ class PaymentController extends Controller
                 try {
                     $actionData = json_decode($deposit->success_action_data, true) ?? [];
                     request()->merge($actionData);
-
                     if ($deposit->success_action == 'hire_influencer') {
                         app(\App\Http\Controllers\User\ParticipantController::class)->accept($actionData['participant_id']);
                     } elseif ($deposit->success_action == 'buy_service') {

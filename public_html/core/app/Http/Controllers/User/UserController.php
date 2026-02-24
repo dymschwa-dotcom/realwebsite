@@ -164,18 +164,18 @@ class UserController extends Controller {
         $countries    = implode(',', array_column($countryData, 'country'));
 
         $request->validate([
-            'country_code' => 'required|in:' . $countryCodes,
-            'country'      => 'required|in:' . $countries,
-            'mobile_code'  => 'required|in:' . $mobileCodes,
+            'country_code' => 'required',
+            'country'      => 'required',
+            'mobile_code'  => 'required',
             'username'     => 'required|unique:users|min:6',
-            'mobile'       => 'required', 'regex:/^([0-9]*)$/', Rule::unique('users')->where('dial_code', $request->mobile_code),
+            'mobile'       => 'required',
             'brand_name'   => 'required|string|max:40',
             'website'      => 'required|url|max:255',
             'image'        => ['required', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png'])],
             'company_name'  => 'nullable|string|max:255',
             ]);
 
-        if (preg_match("/[^a-z0-9_]/", trim($request->username))) {
+        if (preg_match("/[^a-z0-9_/", trim($request->username))) {
             $notify[] = ['info', 'Username can contain only small letters, numbers and underscore.'];
             $notify[] = ['error', 'No special character, space or capital letters in username.'];
             return back()->withNotify($notify)->withInput($request->all());

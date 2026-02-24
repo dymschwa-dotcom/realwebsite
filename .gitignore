@@ -11,3 +11,4 @@ Thumbs.db
 # Ignore local backups
 backups/
 
+backup_database.sql

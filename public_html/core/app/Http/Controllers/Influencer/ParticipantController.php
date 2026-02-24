@@ -16,6 +16,21 @@ class ParticipantController extends Controller {
     use ConversationForCampaign;
 
     public function __construct() {
+// No changes needed here as the provided code snippet is a new function, not a modification of the constructor.
+    }
+
+    public function accept($id) {
+        $participant = Participant::pending()->authCampaign()->with('influencer')->findOrFail($id);
+
+        $acceptParticipant = Participant::accepted()->where('campaign_id', $participant->campaign_id)->count();
+        if ($acceptParticipant >= $participant->campaign->influencer_requirements->required_influencer) {
+            $notify[] = ['error', 'The required influencer limit is over'];
+            return back()->withNotify($notify);
+        }
+
+        $brand    = auth()->user();
+
+        $campaign = $participant->campaign;
         $this->middleware(function ($request, $next) {
             $this->user = auth()->user();
             return $next($request);

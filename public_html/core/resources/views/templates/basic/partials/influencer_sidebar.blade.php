@@ -43,10 +43,14 @@
         </li>
         <li class="sidebar-menu-list__item {{ menuActive('influencer.campaign*') }}">
             <a class="sidebar-menu-list__link" href="{{ route('influencer.campaign.log') }}">
-                <span class="icon">
-                    <i class="fa-solid fa-bullhorn"></i>
-                </span>
-                <span class="text">@lang('Campaigns')</span>
+                <i class="sidebar-menu-list__icon las la-briefcase"></i>
+                <span class="sidebar-menu-list__text">@lang('Campaigns')</span>
+            </a>
+        </li>
+        <li class="sidebar-menu-list__item {{ menuActive('influencer.payment.index') }}">
+            <a class="sidebar-menu-list__link" href="{{ route('influencer.payment.index') }}">
+                <i class="sidebar-menu-list__icon las la-credit-card"></i>
+                <span class="sidebar-menu-list__text">@lang('Payment Settings')</span>
             </a>
         </li>
         <li class="sidebar-menu-list__item {{ menuActive('influencer.withdraw.history') }}">
@@ -91,3 +95,4 @@
         </li>
     </ul>
 </div>
+

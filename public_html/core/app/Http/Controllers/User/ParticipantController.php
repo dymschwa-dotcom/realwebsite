@@ -47,11 +47,6 @@ class ParticipantController extends Controller {
         }
 
         $brand    = auth()->user();
-        if(!$brand->address || !$brand->tax_number) {
-            session()->put('redirect_after_profile_completion', url()->previous());
-            $notify[] = ['error', 'Please complete your business profile (Address and Tax ID) in settings before hiring.'];
-            return to_route('user.profile.setting')->withNotify($notify);
-        }
         
         $campaign = $participant->campaign;
 
@@ -72,17 +67,19 @@ class ParticipantController extends Controller {
                 'service_fee'         => getAmount($commission),
                 'gst_amount'          => getAmount($gstAmount),
                 'success_action'      => 'hire_influencer',
-                'success_action_data' => json_encode(['participant_id' => $id])
+                'success_action_data' => json_encode(['participant_id' => $id]),
+                'direct_checkout'     => 1, // Add flag for direct checkout
+                'gateway'             => 'StripeV3' // Force Stripe for direct feel
             ])->withNotify($notify);
         }
+
+        $influencer = $participant->influencer;
 
         $participant->status = Status::PARTICIPATE_REQUEST_ACCEPTED;
         $participant->gst_amount = $gstAmount;
         $participant->influencer_is_gst_registered = $influencer->is_gst_registered;
         $participant->influencer_country_code = $influencer->country_code;
         $participant->save();
-
-        $influencer = $participant->influencer;
 
         if ($participant->budget > 0) {
             $brand->balance -= $totalAmount;
@@ -192,7 +189,29 @@ class ParticipantController extends Controller {
         }
 
         if ($campaign->payment_type == 'paid') {
-            $influencer->balance += $payableAmount;
+            // NEW STRIPE CONNECT LOGIC - Ensure all platform KYC requirements are met
+            if ($influencer->stripe_onboarded && $influencer->stripe_account_id && $influencer->tax_number && $influencer->address && $influencer->kv == Status::KYC_VERIFIED) {
+                try {
+                    \Stripe\Stripe::setApiKey(config('services.stripe.secret'));
+
+                    \Stripe\Transfer::create([
+                        'amount'         => round($payableAmount * 100), // Stripe uses cents
+                        'currency'       => strtolower($general->cur_text),
+                        'destination'    => $influencer->stripe_account_id,
+                        'transfer_group' => 'CAMPAIGN_' . $participant->id,
+                        'description'    => 'Payment for Campaign: ' . $participant->campaign->title,
+                    ]);
+
+                    $participant->is_paid_via_stripe = true;
+                    $participant->save();
+
+                } catch (\Exception $e) {
+                    $influencer->balance += $payableAmount;
+                    \Log::error("Stripe Transfer Failed for Participant {$participant->id}: " . $e->getMessage());
+                }
+            } else {
+                $influencer->balance += $payableAmount;
+            }
         }
 
         $influencer->increment('order_completed');
@@ -272,12 +291,6 @@ class ParticipantController extends Controller {
             return to_route('pricing')->withNotify($notify);
         }
         
-        if(!$brand->address || !$brand->tax_number) {
-            session()->put('redirect_after_profile_completion', url()->previous());
-            $notify[] = ['error', 'Please complete your business profile (Address and Tax ID) in settings before purchasing.'];
-            return to_route('user.profile.setting')->withNotify($notify);
-        }
-
         $general     = gs();
         $commission  = ($package->price * $general->brand_campaign_commission) / 100;
         
@@ -415,12 +428,6 @@ class ParticipantController extends Controller {
         if ($brand->plan_id == 1) {
             $notify[] = ['error', 'Please upgrade your plan to hire influencers.'];
             return to_route('pricing')->withNotify($notify);
-        }
-        
-        if(!$brand->address || !$brand->tax_number) {
-            session()->put('redirect_after_profile_completion', url()->previous());
-            $notify[] = ['error', 'Please complete your business profile (Address and Tax ID) in settings before hiring.'];
-            return to_route('user.profile.setting')->withNotify($notify);
         }
 
         $general     = gs();
@@ -578,12 +585,6 @@ class ParticipantController extends Controller {
             return to_route('pricing')->withNotify($notify);
         }
         
-        if(!$brand->address || !$brand->tax_number) {
-            session()->put('redirect_after_profile_completion', url()->previous());
-            $notify[] = ['error', 'Please complete your business profile (Address and Tax ID) in settings before accepting a proposal.'];
-            return to_route('user.profile.setting')->withNotify($notify);
-        }
-
         $general     = gs();
         $commission  = ($proposal->budget * $general->brand_campaign_commission) / 100;
         

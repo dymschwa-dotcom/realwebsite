@@ -96,7 +96,7 @@ Route::middleware('influencer')->name('influencer.')->group(function () {
             });
 
             //Campaign
-            Route::middleware('influencer_kyc')->controller('CampaignController')->name('campaign.')->prefix('campaign')->group(function () {
+            Route::controller('CampaignController')->name('campaign.')->prefix('campaign')->group(function () {
                 Route::post('participate/{id}', 'participate')->name('participate');
                 Route::get('invite', 'invite')->name('invite');
                 Route::get('log', 'log')->name('log');
@@ -104,6 +104,9 @@ Route::middleware('influencer')->name('influencer.')->group(function () {
                 Route::get('view/{id}', 'view')->name('view');
                 Route::post('deliver/{id}', 'deliver')->name('deliver');
                 Route::post('cancel/{id}', 'cancel')->name('cancel');
+                Route::get('change-password', 'changePassword')->name('change.password');
+                Route::post('change-password', 'submitPassword');
+
                 Route::post('close-inquiry/{id}', 'closeInquiry')->name('close.inquiry');
                 Route::prefix('conversation')->name('conversation.')->group(function () {
                     Route::get('inbox/{id}', 'inbox')->name('inbox');
@@ -112,7 +115,13 @@ Route::middleware('influencer')->name('influencer.')->group(function () {
                     Route::post('send-proposal/{id}', 'sendProposal')->name('send.proposal');
                     Route::post('accept-proposal/{id}', 'acceptProposal')->name('accept.proposal');
                 });
-                
+            });
+
+            // Stripe Connect
+            Route::controller('StripeConnectController')->prefix('payment')->name('payment.')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('stripe-connect', 'connect')->name('stripe.connect');
+                Route::get('stripe-callback', 'callback')->name('stripe.callback');
             });
 
             // Withdraw

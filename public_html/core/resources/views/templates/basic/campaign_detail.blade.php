@@ -126,7 +126,12 @@
                             </div>
 
                             <div class="apply-section">
-                                @if ($eligible)
+                                @if ($alreadyApplied)
+                                    {{-- Button for influencers who have already submitted an application --}}
+                                    <button class="btn btn-secondary w-100 rounded-pill py-3 fw-bold fs-6 disabled" type="button">
+                                        @lang('Already Applied')
+                                    </button>
+                                @elseif ($eligible)
                                     @if ($campaign->payment_type == 'paid')
                                         <button class="btn btn-dark w-100 rounded-pill py-3 fw-bold fs-6 paidCampaignBtn"
                                                 data-action="{{ route('influencer.campaign.participate', encrypt($campaign->id)) }}"
@@ -242,4 +247,6 @@
     .object-fit-cover { object-fit: cover; }
 </style>
 @endpush
+
+
 

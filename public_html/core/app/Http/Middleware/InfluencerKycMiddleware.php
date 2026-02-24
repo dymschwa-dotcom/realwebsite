@@ -24,6 +24,19 @@ class InfluencerKycMiddleware {
             $notify[] = ['warning', 'Your documents for KYC verification is under review. Please wait for admin approval'];
             return to_route('influencer.home')->withNotify($notify);
         }
+
+        // Additional Platform KYC requirements: Stripe Onboarding and Tax Details
+        if (!$influencer->stripe_onboarded || !$influencer->stripe_account_id) {
+            $notify[] = ['error', 'Please complete your Stripe onboarding to proceed with withdrawals.'];
+            return to_route('influencer.payment.index')->withNotify($notify);
+        }
+
+        if (!$influencer->tax_number || !$influencer->address) {
+            $notify[] = ['error', 'Please complete your tax details (IRD/TFN and Address) in profile settings to proceed.'];
+            return to_route('influencer.profile.setting')->withNotify($notify);
+        }
+
         return $next($request);
     }
 }
+

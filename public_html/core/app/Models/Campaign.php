@@ -53,6 +53,9 @@ class Campaign extends Model {
         return $this->belongsToMany(Platform::class, 'campaign_platforms');
     }
 
+    public function invites() {
+        return $this->hasMany(InviteCampaign::class, 'campaign_id');
+    }
     protected function platformId(): Attribute {
         return new Attribute(
             get: fn() => $this->platforms->pluck('id')->toArray()

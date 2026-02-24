@@ -17,6 +17,8 @@ class KycMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
+        return $next($request);
+
         $user = auth()->user();
         if ($request->is('api/*') && ($user->kv == Status::KYC_UNVERIFIED || $user->kv == Status::KYC_PENDING)) {
             $notify[] = 'You are unable to withdraw due to KYC verification';
@@ -37,3 +39,4 @@ class KycMiddleware
         return $next($request);
     }
 }
+

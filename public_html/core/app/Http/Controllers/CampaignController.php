@@ -26,32 +26,58 @@ class CampaignController extends Controller {
         return view('Template::campaigns', compact('pageTitle', 'campaigns', 'platforms', 'countries', 'categories', 'sections'));
     }
 
-    protected function getFilterCampaign($campaigns, $platforms) {
+        protected function getFilterCampaign($campaigns, $platforms) {
         $request = request();
+
+        // 1. CATEGORIES (Combinable - OR within group)
         if ($request->category) {
-            $categories = Category::active()->whereIn('slug', (array)$request->category)->select('id')->get();
-            if ($categories->count()) {
-                $categoryIds = $categories->pluck('id')->toArray();
-                $campaigns->whereHas('categories', function ($query) use ($categoryIds) {
-                    $query->whereIn('campaign_categories.category_id', $categoryIds);
-                });
-            }
-        }
-        if ($request->platform_name) {
-            $filterPlatforms = Platform::active()->whereIn('name', (array)$request->platform_name)->select('id')->get();
-            if ($filterPlatforms->count()) {
-                $platformIds = $filterPlatforms->pluck('id')->toArray();
-                $campaigns->whereHas('platforms', function ($query) use ($platformIds) {
-                    $query->whereIn('campaign_platforms.platform_id', $platformIds);
-                });
-            }
-        }
-        if ($request->tag) {
-            $tag        = Tag::where('name', $request->tag)->select('id')->first();
-            $campaignId = collect(CampaignTag::where('tag_id', $tag->id)->pluck('campaign_id'))->toArray();
-            $campaigns  = $campaigns->whereIn('id', $campaignId);
+            $categoryIds = Category::active()->whereIn('slug', (array)$request->category)->pluck('id')->toArray();
+            $campaigns->whereHas('categories', function ($query) use ($categoryIds) {
+                $query->whereIn('campaign_categories.category_id', $categoryIds);
+            });
         }
 
+        // 2. PLATFORMS (Combinable - OR within group)
+        $platformNames = array_filter(array_unique((array)$request->platform_name));
+        if ($request->platform) $platformNames[] = $request->platform;
+
+        if (!empty($platformNames)) {
+            $platformIds = Platform::active()->whereIn('name', $platformNames)->pluck('id')->toArray();
+            $campaigns->whereHas('platforms', function ($query) use ($platformIds) {
+                $query->whereIn('campaign_platforms.platform_id', $platformIds);
+            });
+        }
+
+        // 3. FOLLOWER RANGE (Combinable - OR within group)
+        if ($request->follower_range) {
+            $followerRanges = (array)$request->follower_range;
+            $campaigns->where(function ($query) use ($platforms, $followerRanges) {
+                foreach ($followerRanges as $range) {
+                    if (!$range) continue;
+                    
+                    if ($range == 1000000) {
+                        foreach ($platforms as $platform) {
+                            $social = strtolower($platform->name);
+                            $query->orWhere("influencer_requirements->follower_{$social}_start", '>=', 1000000);
+                        }
+                    } else {
+                        $rangeValues = explode('_', $range);
+                        $startRange  = @$rangeValues[0] * 1000;
+                        $endRange    = @$rangeValues[1] * 1000;
+
+                        foreach ($platforms as $platform) {
+                            $social = strtolower($platform->name);
+                            $query->orWhere(function ($q) use ($social, $startRange, $endRange) {
+                                $q->where("influencer_requirements->follower_{$social}_start", '>=', $startRange)
+                                  ->where("influencer_requirements->follower_{$social}_end", '<=', $endRange);
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+        // 4. GENDER (Combinable - OR within group)
         if ($request->gender) {
             $genders = (array)$request->gender;
             $campaigns->where(function ($query) use ($genders) {
@@ -61,6 +87,7 @@ class CampaignController extends Controller {
             });
         }
 
+        // 5. COUNTRY (Combinable - OR within group)
         if ($request->country) {
             $countries = (array)$request->country;
             $campaigns->whereHas('user', function ($query) use ($countries) {
@@ -72,37 +99,58 @@ class CampaignController extends Controller {
             });
         }
 
-        if ($request->follower_range) {
-            $followerRanges = (array)$request->follower_range;
-            $campaigns->where(function ($query) use ($platforms, $followerRanges) {
-                foreach ($followerRanges as $range) {
-                    if (!$range) {
-                        continue;
-                    }
-                    $rangeValue = $range == 1000000 ? 1000000 : 'explode';
-                    if ($rangeValue == 'explode') {
-                        $rangeValues = explode('_', $range);
-                        $startRange  = @$rangeValues[0] * 1000;
-                        $endRange    = @$rangeValues[1] * 1000;
+        if ($request->eligible_only && authInfluencer()) {
+        $influencer = authInfluencer();
+                if (!$influencer->kv) {
+                $campaigns->where('id', 0);
+            } else {
+                $campaigns->whereJsonContains('influencer_requirements->gender', $influencer->gender);
 
-                        foreach ($platforms as $platform) {
-                            $social = strtolower($platform->name);
-                            $query->orWhere(function ($q) use ($social, $startRange, $endRange) {
-                                $q->where("influencer_requirements->follower_{$social}_start", '>=', $startRange)
-                                    ->where("influencer_requirements->follower_{$social}_end", '<=', $endRange);
+                $socialLinks = $influencer->socialLink()->with('platform')->get();
+                if ($socialLinks->isEmpty()) {
+                    $campaigns->where('id', 0);
+                } else {
+                    $influencerPlatformIds = $socialLinks->pluck('platform_id')->toArray();
+
+                    // Influencer must have all platforms required by the campaign
+                    $campaigns->whereDoesntHave('platforms', function ($q) use ($influencerPlatformIds) {
+                        $q->whereNotIn('platforms.id', $influencerPlatformIds);
+                    });
+
+                    // Follower range check for each platform the influencer has
+                    foreach ($socialLinks as $link) {
+                        $pName     = strtolower($link->platform->name);
+                        $followers = $link->followers;
+
+                        $campaigns->where(function ($q) use ($pName, $followers) {
+                            $startKey = "follower_{$pName}_start";
+                            $endKey   = "follower_{$pName}_end";
+
+                            $q->whereDoesntHave('platforms', function ($sq) use ($pName) {
+                                $sq->where('name', $pName);
+                            })->orWhere(function ($sq) use ($startKey, $endKey, $followers) {
+                                $sq->whereRaw("CAST(JSON_EXTRACT(influencer_requirements, '$.$startKey') AS UNSIGNED) <= ?", [$followers])
+                                    ->whereRaw("CAST(JSON_EXTRACT(influencer_requirements, '$.$endKey') AS UNSIGNED) >= ?", [$followers]);
                             });
-                        }
-                    } else {
-                        foreach ($platforms as $platform) {
-                            $social = strtolower($platform->name);
-                            $query->orWhere(function ($q) use ($social, $rangeValue) {
-                                $q->where("influencer_requirements->follower_{$social}_start", '>=', $rangeValue);
-                            });
-                        }
+                        });
                     }
+
+                    // Check if influencer is already invited (logic from detail says they are NOT eligible for general if invited)
+                    $campaigns->whereDoesntHave('invites', function ($q) use ($influencer) {
+                        $q->where('influencer_id', $influencer->id)->where('status', 0);
+                    });
                 }
-            });
+            }
         }
+
+        if ($request->tag) {
+            $tag = Tag::where('name', $request->tag)->first();
+            if($tag) {
+                $campaignIds = CampaignTag::where('tag_id', $tag->id)->pluck('campaign_id')->toArray();
+                $campaigns->whereIn('id', $campaignIds);
+            }
+        }
+
         return $campaigns;
     }
 
@@ -114,8 +162,10 @@ class CampaignController extends Controller {
 
         $pageTitle = 'Campaign Detail';
         $eligible  = false;
+        $alreadyApplied = false;
 
         if ($influencer) {
+            $alreadyApplied = $campaign->participants()->where('influencer_id', $influencer->id)->exists();
             $isInvitedCampaign = InviteCampaign::inactive()->where('campaign_id', $campaign->id)->where('influencer_id', $influencer->id)->exists();
 
             if ($campaign->campaign_type == 'invite') {
@@ -165,6 +215,6 @@ class CampaignController extends Controller {
         $seoContents->description        = strLimit(strip_tags($campaign->description), 150);
         $seoContents->social_description = strLimit(strip_tags($campaign->description), 150);
         $seoImage                        = getImage(getFilePath('campaign') . '/' . $campaign->image, getFileSize('campaign'));
-        return view('Template::campaign_detail', compact('pageTitle', 'campaign', 'eligible', 'seoContents', 'seoImage'));
+        return view('Template::campaign_detail', compact('pageTitle', 'campaign', 'eligible', 'seoContents', 'seoImage', 'alreadyApplied'));
     }
 }

@@ -21,6 +21,10 @@ class ProcessController extends Controller
         try {
             $session = \Stripe\Checkout\Session::create([
                 'payment_method_types' => ['card'],
+                'billing_address_collection' => 'required',
+                'tax_id_collection' => [
+                    'enabled' => true,
+                ],
                 'line_items' => [[
                     'price_data'=>[
                         'unit_amount' => round($deposit->final_amount,2) * 100,
@@ -87,9 +91,37 @@ class ProcessController extends Controller
             $deposit = Deposit::where('btc_wallet',  $session->id)->orderBy('id', 'DESC')->first();
 
             if($deposit->status==Status::PAYMENT_INITIATE){
+                // Capture Stripe details before updating user data
+                $user = $deposit->user;
+                if ($user) {
+                    $user->kv = Status::KYC_VERIFIED;
+                    $kycData = [
+                        'stripe_session_id' => $session->id,
+                        'verified_by' => 'Stripe Checkout',
+                        'verified_at' => now()->toDateTimeString(),
+                    ];
+
+                    if (isset($session->customer_details->address)) {
+                        $addr = $session->customer_details->address;
+                        $user->address = $addr->line1 . ($addr->line2 ? ', ' . $addr->line2 : '');
+                        $user->city = $addr->city;
+                        $user->zip = $addr->postal_code;
+                        $user->country_name = $addr->country;
+                    }
+
+                    if (!empty($session->customer_details->tax_ids)) {
+                        $kycData['tax_id'] = $session->customer_details->tax_ids[0]->value;
+                        $kycData['tax_type'] = $session->customer_details->tax_ids[0]->type;
+                    }
+
+                    $user->kyc_data = $kycData;
+                    $user->save();
+                }
+
                 PaymentController::userDataUpdate($deposit);
             }
         }
         http_response_code(200);
     }
 }
+

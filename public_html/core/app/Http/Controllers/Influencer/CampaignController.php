@@ -48,11 +48,6 @@ class CampaignController extends Controller {
             return back()->withNotify($notify);
         }
         
-        if(!$influencer->address || !$influencer->tax_number) {
-            $notify[] = ['error', 'Please complete your business profile (Address and Tax ID) in settings before participating.'];
-            return to_route('influencer.profile.setting')->withNotify($notify);
-        }
-
         if ($invitedCampaign) {
             $invitedCampaign->status = Status::ENABLE;
             $invitedCampaign->save();
@@ -105,15 +100,13 @@ class CampaignController extends Controller {
     }
 
     protected function validation($campaign, $influencer) {
+        // Stripe onboarding requirement removed to allow frictionless participation
         $gender = $campaign->influencer_requirements->gender;
         if (!in_array($influencer->gender, $gender)) {
             throw ValidationException::withMessages(["error" => "Doesn't match the target gender"]);
         }
         if (!$influencer->socialLink) {
             throw ValidationException::withMessages(["error" => "You have to connect social link"]);
-        }
-        if (!$influencer->kv) {
-            return to_route('influencer.kyc.form');
         }
         foreach ($campaign->platforms as $platform) {
             $social = $influencer->socialLink()->where('platform_id', $platform->id)->first();

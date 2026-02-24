@@ -23,7 +23,18 @@
     <div class="invoice-box">
         <div class="header">
             <div style="display: table-cell;">
-                <img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path(siteLogo()))) }}" class="logo">
+                @php
+                    $logoPath = public_path('assets/images/logo_icon/logo.png');
+                    $base64Logo = '';
+                    if (file_exists($logoPath)) {
+                        $base64Logo = base64_encode(file_get_contents($logoPath));
+                    }
+                @endphp
+                @if($base64Logo)
+                    <img src="data:image/png;base64,{{ $base64Logo }}" class="logo">
+                @else
+                    <h2>{{ gs('site_name') }}</h2>
+                @endif
             </div>
             <div style="display: table-cell;" class="title">
                 <h1>RECEIPT</h1>

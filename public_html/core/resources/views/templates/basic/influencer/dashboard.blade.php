@@ -3,6 +3,25 @@
     <div class="row justify-content-center">
         <div class="col-md-12">
             <div class="notice"></div>
+            @if (!$influencer->stripe_onboarded || !$influencer->address || !$influencer->tax_number)
+                <div class="alert alert--danger" role="alert">
+                    <div class="alert__icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <p class="alert__message">
+                        <span class="fw-bold">@lang('Payouts Paused - Action Required')</span><br>
+                        <small>
+                            @lang('Your profile is live and you can apply for campaigns, but you cannot withdraw funds until you complete the following:')
+                            <ul class="mt-2 mb-0 ms-3">
+                                @if(!$influencer->stripe_onboarded)
+                                    <li><a href="{{ route('influencer.payment.index') }}" class="link-color fw-bold">@lang('Connect Stripe Express')</a> - @lang('Required to receive instant, automated payments.')</li>
+                                @endif
+                                @if(!$influencer->address || !$influencer->tax_number)
+                                    <li><a href="{{ route('influencer.profile.setting') }}" class="link-color fw-bold">@lang('Update Profile Details')</a> - @lang('Required for New Zealand tax compliance (Address, Tax ID & GST Status).')</li>
+                                @endif
+                            </ul>
+                        </small>
+                    </p>
+                </div>
+            @endif
             @php
                 $kyc = getContent('influencer_kyc.content', true);
             @endphp
@@ -196,3 +215,4 @@
         })(jQuery)
     </script>
 @endpush
+

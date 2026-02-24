@@ -43,55 +43,24 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label class="form--label">@lang('Email Address')</label>
-                                    <input class="form--control" type="text" value="{{ $user->email }}" readonly>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
                                     <label class="form--label">@lang('Brand Name')</label>
-                                    <input class="form--control" type="text" name="brand_name" value="{{ $user->brand_name }}">
+                                    <input class="form--control" type="text" name="brand_name" value="{{ $user->brand_name }}" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label class="form--label">@lang('Brand Website')</label>
-                                    <input class="form--control" type="text" name="website" value="{{ $user->website }}">
+                                    <input class="form--control" type="text" name="website" value="{{ $user->website }}" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label class="form--label">@lang('Company Name')</label>
-                                    <input class="form--control" name="company_name" type="text" value="{{ $user->company_name }}">
+                                    <input class="form--control" name="company_name" type="text" value="{{ $user->company_name }}" required>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form--label">@lang('Address')</label>
-                                    <input class="form--control" name="address" type="text" value="{{ $user->address }}">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form--label">@lang('IRD Number / TFN')</label>
-                                    <input class="form--control" name="tax_number" type="text" value="{{ $user->tax_number }}">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form--label">@lang('Are you GST/VAT Registered?')</label>
-                                    <select name="is_gst_registered" class="form-control form--control">
-                                        <option value="0" @selected(!$user->is_gst_registered)>@lang('No')</option>
-                                        <option value="1" @selected($user->is_gst_registered)>@lang('Yes')</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6 {{ $user->is_gst_registered ? '' : 'd-none' }}" id="gst-number-container">
-                                <div class="form-group">
-                                    <label class="form--label">@lang('GST/VAT Number')</label>
-                                    <input class="form--control" name="gst_number" type="text" value="{{ $user->gst_number }}">
-                                </div>
-                            </div>
+                           
+                            
                         </div>
                         <button class="btn btn--base w-100" type="submit">@lang('Submit')</button>
                     </form>
@@ -131,4 +100,6 @@
         })(jQuery);
     </script>
 @endpush
+
+
 

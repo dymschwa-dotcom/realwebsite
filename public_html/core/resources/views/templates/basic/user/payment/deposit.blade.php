@@ -14,9 +14,10 @@
         <input name="currency" type="hidden">
         <input name="success_action" type="hidden" value="{{ request()->success_action }}">
         <input name="success_action_data" type="hidden" value="{{ request()->success_action_data }}">
+        <input name="amount" type="hidden" value="{{ request()->amount }}">
         <div class="gateway-card">
             <div class="row justify-content-center gy-sm-4 gy-3">
-                <div class="col-lg-6">
+                <div class="col-lg-6 @if(request()->direct_checkout) d-none @endif">
                     <div class="payment-system-list is-scrollable gateway-option-list">
                         @foreach ($gatewayCurrency as $data)
                             <label class="payment-item @if ($loop->index > 4) d-none @endif gateway-option" for="{{ titleToKey($data->name) }}">
@@ -126,6 +127,11 @@
                 // Finalize Form for Laravel if gateway exists
                 $('#btn-pay').prop('disabled', false);
                 $('input[name=currency]').val(gatewayData.currency);
+
+                // Update Button Text if Direct Checkout
+                @if(request()->direct_checkout)
+                    $('#btn-pay').text("@lang('Complete Purchase')");
+                @endif
             } else {
                 // Keep button disabled if no payment method is available
                 $('#btn-pay').prop('disabled', true);
@@ -144,9 +150,18 @@
 
         $(document).ready(function() {
             // If gateways exist, click the first one automatically
-            if ($('.gateway-input').length > 0) {
-                $('.gateway-input').first().prop('checked', true);
-            }
+            @if(request()->direct_checkout && request()->gateway)
+                var gatewayInput = $('.gateway-input[value="{{ request()->gateway }}"]');
+                if(gatewayInput.length > 0) {
+                    gatewayInput.prop('checked', true);
+                } else {
+                    $('.gateway-input').first().prop('checked', true);
+                }
+            @else
+                if ($('.gateway-input').length > 0) {
+                    $('.gateway-input').first().prop('checked', true);
+                }
+            @endif
             calculateFinalTotal();
         });
 

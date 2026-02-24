@@ -46,7 +46,7 @@
                         <div class="d-flex align-items-center gap-4 mb-4">
                             <div class="position-relative">
                                 <img src="{{ getImage(getFilePath('influencer') . '/' . $influencer->image, getFileSize('influencer')) }}" alt="image" class="rounded-circle border" style="width: 100px; height: 100px; object-fit: cover;">
-                                @if($influencer->engagement && $influencer->avg_views && $influencer->primary_gender)
+                                 @if($influencer->kv == Status::KYC_VERIFIED && $influencer->tax_number && $influencer->address)
                                     <span class="position-absolute bottom-0 end-0 bg-white rounded-circle d-flex align-items-center justify-content-center border" style="width: 25px; height: 25px; transform: translate(5%, 5%);">
                                         <i class="las la-check-circle text-primary fs-5"></i>
                                     </span>
@@ -617,4 +617,6 @@
     }
 </style>
 @endpush
+
+
 

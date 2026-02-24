@@ -130,7 +130,11 @@ class Influencer extends Authenticatable
     // SCOPES
     public function scopeActive($query)
     {
-        return $query->where('status', Status::USER_ACTIVE)->where('ev', Status::VERIFIED)->where('sv', Status::VERIFIED)->where('profile_complete', Status::YES)->where('profile_step', 3);
+        return $query->where('status', Status::USER_ACTIVE)
+            ->where('ev', Status::VERIFIED)
+            ->where('sv', Status::VERIFIED)
+            ->where('profile_complete', Status::YES)
+            ->where('profile_step', 3);
     }
 
     public function scopeBanned($query)

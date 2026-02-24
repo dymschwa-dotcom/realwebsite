@@ -356,7 +356,7 @@
                                 </form>
                                 <form action="{{ route('user.participant.conversation.reject.proposal', $pendingProposal->id) }}" method="POST">
                                     @csrf
-                                    <button type="submit" class="btn btn-outline-danger btn--sm w-100">@lang('Decline Offer')</button>
+                                    <button type="submit" class="btn btn-danger btn--sm w-100">@lang('Decline Offer')</button>
                                 </form>
                             </div>
                         </div>

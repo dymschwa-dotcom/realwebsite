@@ -28,9 +28,9 @@ class ProfileController extends Controller {
             'firstname'    => 'required|string',
             'lastname'     => 'required|string',
             'address'      => 'nullable|string|max:255',
-            'tax_number'   => 'nullable|string|max:50',
+            'tax_number'   => ['nullable', 'string', 'max:12', 'regex:/^[0-9]{2,3}-?[0-9]{3}-?[0-9]{3}$/',
             'is_gst_registered' => 'nullable|boolean',
-            'gst_number'   => 'nullable|string|max:50',
+            'gst_number'   => ['required_if:is_gst_registered,1', 'nullable', 'string', 'max:12', 'regex:/^[0-9]{2,3}-?[0-9]{3}-?[0-9]{3}$/'],
             'category'     => 'required|array|min:1',
             'category.*'   => 'integer|exists:categories,id',
             'bio'          => 'nullable|string',
@@ -72,9 +72,9 @@ class ProfileController extends Controller {
         $influencer->firstname  = $request->firstname;
         $influencer->lastname   = $request->lastname;
         $influencer->address    = $request->address;
-        $influencer->tax_number = $request->tax_number;
+        $influencer->tax_number = str_replace('-', '', $request->tax_number);
         $influencer->is_gst_registered = $request->is_gst_registered ? 1 : 0;
-        $influencer->gst_number = $request->gst_number;
+        $influencer->gst_number = $request->gst_number ? str_replace('-', '', $request->gst_number) : null;
         $influencer->gender     = $request->gender;
         $influencer->birth_date = $request->birth_date;
         $influencer->city       = $request->city;
@@ -284,7 +284,7 @@ class ProfileController extends Controller {
             'gallery_image' => ['required', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png']), 'max:10240'],
         ], [
             'gallery_image.max' => 'Gallery images may not be greater than 10MB',
-        ]);
+        );
     }
 }
 
