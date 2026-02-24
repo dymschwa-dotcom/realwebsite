@@ -37,12 +37,15 @@ COPY ./public_html /var/www/html/
 # We copy the example file so it's not empty, satisfying the app's check
 RUN cp /var/www/html/core/.env.example/var/www/html/core/.env
 
+RUN touch /var/www/html/core/storage/installed
+
 # 7. Set the correct permissions for Laravel/PHP
 # In cPanel, permissions are often loose. In Docker, we need precision.
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && chmod -R 775 /var/www/html/core/storage \
-    && chmod -R 775 /var/www/html/core/bootstrap/cache
+    && chmod -R 775 /var/www/html/core/bootstrap/cache \
+    && chown www-data:www-data /var/www/html/core/.env
 
 # 8. Set working directory
 WORKDIR /var/www/html/core
