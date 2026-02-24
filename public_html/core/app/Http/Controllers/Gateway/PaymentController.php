@@ -82,7 +82,7 @@ class PaymentController extends Controller
         $data->success_action      = $request->success_action;
         $data->success_action_data = $request->success_action_data;
         $data->gst_amount          = $request->gst_amount ?? 0;
-        $data->service_fee         = $request->service_fee ?? 0;
+        $data->service_fee = $request->service_fee ?: $request->query('service_fee', 0);
 
         // Add this to ensure the description includes the GST/Fee info for the gateway
         $data->save();
