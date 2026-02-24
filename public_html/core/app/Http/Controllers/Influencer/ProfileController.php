@@ -284,7 +284,7 @@ class ProfileController extends Controller {
             'gallery_image' => ['required', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png']), 'max:10240'],
         ], [
             'gallery_image.max' => 'Gallery images may not be greater than 10MB',
-        );
+        ]);
     }
 }
 
