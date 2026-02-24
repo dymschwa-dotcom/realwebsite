@@ -5,8 +5,8 @@ services:
     env_file: .env
     ports:
       - "8181:80"
-    volumes:
-      - ./public_html:/var/www/html
+   # volumes:
+   #   - ./public_html:/var/www/html 
     depends_on:
       - db
 
