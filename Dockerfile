@@ -23,14 +23,18 @@ COPY ./public_html /var/www/html/
 RUN cp /var/www/html/core/.env.example /var/www/html/core/.env \
     && touch /var/www/html/core/storage/installed
 
-# 8. Set the correct permissions for Laravel/PHP
+# 8. Set the correct permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && chmod -R 775 /var/www/html/core/storage \
     && chmod -R 775 /var/www/html/core/bootstrap/cache \
     && chown www-data:www-data /var/www/html/core/.env
 
-# 9. Set working directory to the web root
-WORKDIR /var/www/html
+# 9. Set working directory to where composer.json lives
+WORKDIR /var/www/html/core
 
-# (Note: composer install removed to prevent build crashes)
+# 10. Install dependencies (Added --no-scripts to prevent build crashes)
+RUN composer install --no-interaction --optimize-autoloader --no-dev --no-scripts
+
+# 11. Final setup
+WORKDIR /var/www/html
