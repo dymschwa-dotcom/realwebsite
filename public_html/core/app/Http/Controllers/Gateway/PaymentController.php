@@ -41,7 +41,7 @@ class PaymentController extends Controller
             $gate->where('status', Status::ENABLE);
         })->where('method_code', $request->gateway)->where('currency', $request->currency)->first();
         if (!$gate) {
-            $notify[] = ['error', 'Invalid gateway';
+            $notify[] = ['error', 'Invalid gateway'];
             return back()->withNotify($notify);
         }
 
