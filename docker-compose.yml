@@ -5,6 +5,9 @@ services:
     env_file: .env
     ports:
       - "8181:80"
+    volumes:
+      - web_assets:/var/www/html/assets/images
+      - web_storage:/var/www/html/core/storage/app
     depends_on:
       - db
 
@@ -16,3 +19,8 @@ services:
     volumes:
       - ./init:/docker-entrypoint-initdb.d
       - ./db_data:/var/lib/mysql
+
+volumes:
+  web_assets:
+  web_storage:
+
