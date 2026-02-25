@@ -16,6 +16,11 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 # 5. Enable 'mod_rewrite'
 RUN a2enmod rewrite
 
+# 5.1 Configure PHP settings for larger uploads
+RUN echo "upload_max_filesize=64M" > /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size=64M" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "memory_limit=256M" >> /usr/local/etc/php/conf.d/uploads.ini
+
 # 6. Copy your local website files
 COPY ./public_html /var/www/html/
 
@@ -28,6 +33,8 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && chmod -R 775 /var/www/html/core/storage \
     && chmod -R 775 /var/www/html/core/bootstrap/cache \
+    && mkdir -p /var/www/html/assets/images \
+    && chmod -R 775 /var/www/html/assets/images \
     && chown www-data:www-data /var/www/html/core/.env
 
 # 9. Set working directory to where composer.json lives
