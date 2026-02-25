@@ -65,7 +65,7 @@ class RegisterController extends Controller
     public function register(Request $request)
     {
         if (!gs('registration')) {
-            $notify[ = ['error', 'Registration not allowed'];
+            $notify[] = ['error', 'Registration not allowed'];
             return back()->withNotify($notify);
         }
         $this->validator($request->all())->validate();
