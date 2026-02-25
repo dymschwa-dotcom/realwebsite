@@ -6,12 +6,8 @@ services:
     ports:
       - "8181:80"
     volumes:
-    # - ./public_html:/var/www/html 
-    # This saves your logos and site images
-      - /data/coolify/applications/cs8sc4swoc4c0cwg4cwwgwsg/assets:/var/www/html/assets/images
-      # This saves user uploads and system files
-      - /data/coolify/applications/cs8sc4swoc4c0cwg4cwwgwsg/storage:/var/www/html/core/storage/app
-
+      - web_assets:/var/www/html/assets/images
+      - web_storage:/var/www/html/core/storage/app
     depends_on:
       - db
 
@@ -23,3 +19,7 @@ services:
     volumes:
       - ./init:/docker-entrypoint-initdb.d
       - ./db_data:/var/lib/mysql
+
+volumes:
+  web_assets:
+  web_storage:
