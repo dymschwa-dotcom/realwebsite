@@ -35,7 +35,7 @@
                 </div>
                 @if($influencer->galleries->count() > 3)
                 <button class="btn btn-white btn-sm position-absolute bottom-0 end-0 m-4 shadow-sm rounded-pill px-4 py-2 fw-bold" data-bs-toggle="modal" data-bs-target="#galleryModal">
-                    <i class="las la-images me-1"></i> @lang('Show all photos')
+                    <i class="las la-images me-1"></i> @lang('Show Portfolio')
                 </button>
                 @endif
             </div>
@@ -68,8 +68,18 @@
 
                         <div class="social-pills d-flex flex-wrap gap-2 mb-4">
                             @foreach ($influencer->socialLink as $social)
+                                @php
+                                    $platformName = strtolower($social->platform->name);
+                                    $iconColor = '#666'; // Default
+                                    if(str_contains($platformName, 'instagram')) $iconColor = '#E4405F';
+                                    elseif(str_contains($platformName, 'facebook')) $iconColor = '#1877F2';
+                                    elseif(str_contains($platformName, 'youtube')) $iconColor = '#FF0000';
+                                    elseif(str_contains($platformName, 'tiktok')) $iconColor = '#000000';
+                                    elseif(str_contains($platformName, 'twitter') || str_contains($platformName, 'x')) $iconColor = '#000000';
+                                    elseif(str_contains($platformName, 'linkedin')) $iconColor = '#0077B5';
+                                @endphp
                                 <div class="social-pill d-flex align-items-center gap-2 border rounded-pill px-3 py-1 bg-white shadow-sm">
-                                    <span class="fs-18">@php echo $social->platform->icon @endphp</span>
+                                    <span class="fs-18" style="color: {{ $iconColor }};">@php echo $social->platform->icon @endphp</span>
                                     <span class="fw-bold small {{ !$showInsights ? 'blur-text' : '' }}">{{ getFollowerCount($social->followers) }}</span>
                                 </div>
                             @endforeach
@@ -93,11 +103,11 @@
                     <ul class="nav nav-tabs border-0 gap-4 mb-4" id="profileTabs" role="tablist">
                         @if($influencer->engagement && $influencer->avg_views && $influencer->primary_gender)
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active fw-bold border-0 px-0 pb-2 bg-transparent text-dark border-bottom-2" id="audience-tab" data-bs-toggle="tab" data-bs-target="#audience" type="button" role="tab" aria-selected="true">@lang('Audience')</button>
+                            <button class="nav-link active fw-bold border-0 px-0 pb-2 bg-transparent text-dark" id="audience-tab" data-bs-toggle="tab" data-bs-target="#audience" type="button" role="tab" aria-selected="true">@lang('Audience')</button>
                         </li>
                         @endif
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link fw-bold border-0 px-0 pb-2 bg-transparent text-muted {{ !($influencer->engagement && $influencer->avg_views && $influencer->primary_gender) ? 'active text-dark border-bottom-2' : '' }}" id="packages-tab" data-bs-toggle="tab" data-bs-target="#packages" type="button" role="tab" aria-selected="false">@lang('Packages')</button>
+                            <button class="nav-link fw-bold border-0 px-0 pb-2 bg-transparent text-muted {{ !($influencer->engagement && $influencer->avg_views && $influencer->primary_gender) ? 'active text-dark' : '' }}" id="packages-tab" data-bs-toggle="tab" data-bs-target="#packages" type="button" role="tab" aria-selected="false">@lang('Packages')</button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link fw-bold border-0 px-0 pb-2 bg-transparent text-muted" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews" type="button" role="tab" aria-selected="false">@lang('Reviews')</button>
@@ -155,9 +165,16 @@
                                     $availablePlatforms = \App\Models\Platform::whereIn('id', $uniquePlatformIds)->get();
                                 @endphp
                                 @foreach($availablePlatforms as $platform)
+                                    @php
+                                        $pName = strtolower($platform->name);
+                                        $pColor = '#666';
+                                        if(str_contains($pName, 'instagram')) $pColor = '#E4405F';
+                                        elseif(str_contains($pName, 'facebook')) $pColor = '#1877F2';
+                                        elseif(str_contains($pName, 'youtube')) $pColor = '#FF0000';
+                                    @endphp
                                     <li class="nav-item">
                                         <button class="nav-link rounded-pill btn-sm px-3 fw-bold d-flex align-items-center gap-2" data-filter="platform-{{ $platform->id }}">
-                                            @php echo $platform->icon @endphp {{ $platform->name }}
+                                            <span style="color: {{ $pColor }};">@php echo $platform->icon @endphp</span> {{ $platform->name }}
                                         </button>
                                     </li>
                                 @endforeach
@@ -313,11 +330,11 @@
 
                             <div class="d-grid gap-3">
                                 @auth
-                                <a href="{{ route('user.participant.create.inquiry', $influencer->id) }}" class="btn btn-dark rounded-pill py-3 fw-bold fs-6 text-white">
+                                <a href="{{ route('user.participant.create.inquiry', $influencer->id) }}" class="btn btn--base rounded-pill py-3 fw-bold fs-6 text-white">
                                  @lang('Message Now')
                                 </a>
                                 @else
-                                 <a href="{{ route('user.login') }}" class="btn btn-dark rounded-pill py-3 fw-bold fs-6 text-white">
+                                 <a href="{{ route('user.login') }}" class="btn btn--base rounded-pill py-3 fw-bold fs-6 text-white">
                                 @lang('Message Now')
                                 </a>
                                 @endauth
@@ -460,6 +477,11 @@
 
 @push('style')
 <style>
+    :root {
+        --base-color: hsl(var(--base-h), var(--base-s), var(--base-l));
+        --base-color-rgba: hsla(var(--base-h), var(--base-s), var(--base-l), 0.1);
+        --base-color-rgba-2: hsla(var(--base-h), var(--base-s), var(--base-l), 0.2);
+    }
     body {
         background-color: #fff !important;
     }
@@ -548,10 +570,15 @@
     .lh-base { line-height: 1.6 !important; }
 
     .nav-tabs .nav-link {
-        border-bottom: 2px solid transparent !important;
+        border-bottom: 3px solid transparent !important;
+        transition: all 0.3s ease;
     }
     .nav-tabs .nav-link.active {
-        border-bottom-color: #000 !important;
+        border-bottom-color: var(--base-color) !important;
+        color: var(--base-color) !important;
+    }
+    .nav-tabs .nav-link:hover {
+        color: var(--base-color) !important;
     }
 
     /* Filter Tabs Styles */
@@ -565,17 +592,33 @@
         background-color: #eee;
     }
     .nav-pills .nav-link.active {
-        background-color: #000 !important;
+        background-color: var(--base-color) !important;
         color: #fff !important;
-        border-color: #000;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        border-color: var(--base-color);
+        box-shadow: 0 4px 10px var(--base-color-rgba-2);
     }
     
     /* Selected Package State */
     .selected-package {
-        border-color: #000 !important;
-        background-color: #fafafa !important;
+        border-color: var(--base-color) !important;
+        background-color: var(--base-color-rgba) !important;
         transform: translateY(-3px);
+    }
+
+    .rating-display i {
+        color: var(--base-color) !important;
+    }
+
+    .text--warning {
+        color: var(--base-color) !important;
+    }
+    
+    /* Custom Styling for Platform icons in packages */
+    .social-icon {
+        transition: color 0.3s;
+    }
+    .package-item:hover .social-icon {
+        color: var(--base-color) !important;
     }
     
     /* Expand Button */

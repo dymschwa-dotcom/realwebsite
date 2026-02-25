@@ -50,8 +50,7 @@ Route::middleware('auth')->name('user.')->group(function () {
         Route::namespace('User')->group(function () {
 
             Route::middleware('check.subscription')->group(function () {
-            Route::controller('CampaignController')->prefix('campaign')->name('campaign.')->group(function () {
-                Route::middleware('kyc')->group(function () {
+                Route::controller('CampaignController')->prefix('campaign')->name('campaign.')->group(function () {
                     Route::get('create/{step?}/{slug?}/{edit?}', 'create')->name('create');
                     Route::post('basic/{slug?}', 'basic')->name('basic');
                     Route::post('content/{slug}', 'content')->name('content');
@@ -62,6 +61,7 @@ Route::middleware('auth')->name('user.')->group(function () {
                     Route::get('/invite/form/{id}', 'inviteForm')->name('invite.form');
                     Route::get('get/influencer', 'getInfluencerUsername')->name('influencer.username');
                     Route::post('send/invite/{id}', 'sendInviteRequest')->name('send.invite');
+                    
                     Route::get('/', 'index')->name('index');
                     Route::get('pending', 'pending')->name('pending');
                     Route::get('approved', 'approved')->name('approved');
@@ -69,42 +69,43 @@ Route::middleware('auth')->name('user.')->group(function () {
                     Route::get('incomplete', 'incomplete')->name('incompleted');
                     Route::get('view/{id}', 'view')->name('view');
                 });
-            });
 
-            Route::controller('ParticipantController')->prefix('participant')->name('participant.')->group(function () {
-                Route::get('list/{id}', 'list')->name('list');
-                Route::post('accept/{id}', 'accept')->name('accept');
-                Route::post('reject/{id}', 'reject')->name('reject');
-                Route::post('completed/{id}', 'completed')->name('completed');
-                Route::post('reported/{id}', 'reported')->name('reported');
-                Route::get('detail/{id}', 'detail')->name('detail');
-                Route::post('close-inquiry/{id}', 'closeInquiry')->name('close.inquiry');
+                Route::controller('ParticipantController')->prefix('participant')->name('participant.')->group(function () {
+                    Route::get('list/{id}', 'list')->name('list');
+                    Route::post('accept/{id}', 'accept')->name('accept');
+                    Route::post('reject/{id}', 'reject')->name('reject');
+                    Route::post('completed/{id}', 'completed')->name('completed');
+                    Route::post('reported/{id}', 'reported')->name('reported');
+                    Route::get('detail/{id}', 'detail')->name('detail');
+                    Route::post('close-inquiry/{id}', 'closeInquiry')->name('close.inquiry');
 
-                Route::prefix('conversation')->name('conversation.')->group(function () {
-                    Route::get('inbox/{id}', 'inbox')->name('inbox');
-                    Route::any('send-message/{id}', 'sendMessage')->name('send.message');
-                    Route::any('view-message', 'viewMessage')->name('view.message');
-                    Route::post('send-proposal/{id}', 'sendProposal')->name('send.proposal');
-                    Route::post('accept-proposal/{id}', 'acceptProposal')->name('accept.proposal');
-                    Route::post('reject-proposal/{id}', 'rejectProposal')->name('reject.proposal');
-                    Route::post('deliverable/approve', 'approveDeliverable')->name('deliverable.approve');
-                    Route::post('deliverable/reject', 'rejectDeliverable')->name('deliverable.reject');
+                    Route::prefix('conversation')->name('conversation.')->group(function () {
+                        Route::get('inbox/{id}', 'inbox')->name('inbox');
+                        Route::any('send-message/{id}', 'sendMessage')->name('send.message');
+                        Route::any('view-message', 'viewMessage')->name('view.message');
+                        Route::post('send-proposal/{id}', 'sendProposal')->name('send.proposal');
+                        Route::post('accept-proposal/{id}', 'acceptProposal')->name('accept.proposal');
+                        Route::post('reject-proposal/{id}', 'rejectProposal')->name('reject.proposal');
+                        Route::post('deliverable/approve', 'approveDeliverable')->name('deliverable.approve');
+                        Route::post('deliverable/reject', 'rejectDeliverable')->name('deliverable.reject');
+                    });
+
+                    Route::post('buy-service/{id}', 'buyService')->name('buy.service');
+                    Route::get('create-inquiry/{influencerId}', 'createInquiry')->name('create.inquiry');
+                    Route::post('hire-inquiry/{id}', 'hireFromInquiry')->name('hire.inquiry');
                 });
-
-                Route::post('buy-service/{id}', 'buyService')->name('buy.service');
-                Route::get('create-inquiry/{influencerId}', 'createInquiry')->name('create.inquiry');
-                Route::post('hire-inquiry/{id}', 'hireFromInquiry')->name('hire.inquiry');
-            });
             });
 
             Route::controller('UserController')->group(function () {
                 Route::get('dashboard', 'home')->name('home');
                 Route::get('download-attachments/{file_hash}', 'downloadAttachment')->name('download.attachment');
                 Route::get('invoice/download/{trx}', 'downloadInvoice')->name('invoice.download');
+                
                 // 2FA
                 Route::get('twofactor', 'show2faForm')->name('twofactor');
                 Route::post('twofactor/enable', 'create2fa')->name('twofactor.enable');
                 Route::post('twofactor/disable', 'disable2fa')->name('twofactor.disable');
+                
                 // KYC
                 Route::get('kyc-form', 'kycForm')->name('kyc.form');
                 Route::get('kyc-data', 'kycData')->name('kyc.data');
@@ -118,44 +119,19 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::post('subscribe/{id}', 'subscribePlan')->name('subscribe.plan');
             });
 
-            Route::controller('CampaignController')->prefix('campaign')->name('campaign.')->group(function () {
-                Route::middleware('kyc')->group(function () {
-                    Route::get('create/{step?}/{slug?}/{edit?}', 'create')->name('create');
-                    Route::post('basic/{slug?}', 'basic')->name('basic');
-                    Route::post('content/{slug}', 'content')->name('content');
-                    Route::post('description/{slug}', 'description')->name('description');
-                    Route::post('requirement/{slug}', 'requirement')->name('requirement');
-                    Route::post('budget/{slug}', 'budget')->name('budget');
-                    Route::get('previous/{step?}/{slug?}', 'previous')->name('previous');
-                    Route::get('/invite/form/{id}', 'inviteForm')->name('invite.form');
-                    Route::get('get/influencer', 'getInfluencerUsername')->name('influencer.username');
-                    Route::post('send/invite/{id}', 'sendInviteRequest')->name('send.invite');
-                    Route::get('/', 'index')->name('index');
-                    Route::get('pending', 'pending')->name('pending');
-                    Route::get('approved', 'approved')->name('approved');
-                    Route::get('rejected', 'rejected')->name('rejected');
-                    Route::get('incomplete', 'incomplete')->name('incompleted');
-                    Route::get('view/{id}', 'view')->name('view');
-                });
-            });
-
             Route::controller('ReviewController')->prefix('review')->name('review.')->group(function () {
-                Route::middleware('kyc')->group(function () {
-                    Route::get('index', 'index')->name('index');
-                    Route::get('form/{participantId}/{id?}', 'reviewForm')->name('form');
-                    Route::post('add/{participantId}/{id?}', 'add')->name('add');
-                    Route::post('remove/{id}', 'remove')->name('remove');
-            });
+                Route::get('index', 'index')->name('index');
+                Route::get('form/{participantId}/{id?}', 'reviewForm')->name('form');
+                Route::post('add/{participantId}/{id?}', 'add')->name('add');
+                Route::post('remove/{id}', 'remove')->name('remove');
             });
 
             Route::controller('FavoriteController')->prefix('favorite')->name('favorite.')->group(function () {
                 Route::get('list', 'favoriteList')->name('list');
-                Route::middleware('kyc')->group(function () {
-                    Route::post('add', 'addFavorite')->name('add');
-                    Route::post('delete', 'delete')->name('delete');
-                    Route::post('remove/{id}', 'remove')->name('remove');
+                Route::post('add', 'addFavorite')->name('add');
+                Route::post('delete', 'delete')->name('delete');
+                Route::post('remove/{id}', 'remove')->name('remove');
             });
-        });
 
             // Profile setting
             Route::controller('ProfileController')->group(function () {

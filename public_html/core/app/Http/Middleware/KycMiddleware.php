@@ -17,24 +17,19 @@ class KycMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-        return $next($request);
-
         $user = auth()->user();
-        if ($request->is('api/*') && ($user->kv == Status::KYC_UNVERIFIED || $user->kv == Status::KYC_PENDING)) {
-            $notify[] = 'You are unable to withdraw due to KYC verification';
-            return response()->json([
-                'remark'=>'kyc_verification',
-                'status'=>'error',
-                'message'=>['error'=>$notify],
-            ]);
+
+        // 1. Check Custom Criteria for Brands
+        // brand_name + website + company_name + address
+        if (!$user->brand_name || !$user->website || !$user->company_name || !$user->address) {
+            $notify[] = ['error', 'Please complete your brand profile details (Name, Website, Company, and Address) to proceed.'];
+            return to_route('user.profile.setting')->withNotify($notify);
         }
-        if ($user->kv == Status::KYC_UNVERIFIED) {
-            $notify[] = ['error','You are not KYC verified. For being KYC verified, please provide these information'];
-            return to_route('user.kyc.form')->withNotify($notify);
-        }
-        if ($user->kv == Status::KYC_PENDING) {
-            $notify[] = ['warning','Your documents for KYC verification is under review. Please wait for admin approval'];
-            return to_route('user.home')->withNotify($notify);
+
+        // 2. Auto-sync KYC status
+        if ($user->kv != Status::KYC_VERIFIED) {
+            $user->kv = Status::KYC_VERIFIED;
+            $user->save();
         }
         return $next($request);
     }

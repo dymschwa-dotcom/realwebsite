@@ -43,7 +43,7 @@
                                 <div>
                                     <i class="lar la-2x la-star"></i>
                                     <br>
-                                    @lang('No review yet')
+                                    @lang('No reviews yet')
                                 </div>
                             </td>
                         </tr>

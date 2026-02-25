@@ -30,11 +30,18 @@
                             {{-- Thumbnail with Unsplash Fallback --}}
                             <div class="campaign-card-img">
                                 <a href="{{ $detailRoute }}" class="d-block h-100">
-                                    @if($campaign->image)
-                                        <img src="{{ getImage(getFilePath('campaign') . '/' . $campaign->image, getFileSize('campaign')) }}" alt="campaign" class="rounded-3">
-                                    @else
-                                        <img src="https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=500&auto=format&fit=crop" alt="placeholder" class="rounded-3">
-                                    @endif
+                                    @php
+                                        $randomImages = [
+                                            'https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=500&auto=format&fit=crop',
+                                            'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=500&auto=format&fit=crop',
+                                            'https://images.unsplash.com/photo-1511895426328-dc8714191300?q=80&w=500&auto=format&fit=crop',
+                                            'https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=500&auto=format&fit=crop',
+                                            'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=500&auto=format&fit=crop',
+                                            'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=500&auto=format&fit=crop'
+                                        ];
+                                        $campaignImage = $campaign->image ? getImage(getFilePath('campaign') . '/' . $campaign->image, getFileSize('campaign')) : $randomImages[$loop->index % count($randomImages)];
+                                    @endphp
+                                    <img src="{{ $campaignImage }}" alt="campaign" class="rounded-3">
                                 </a>
                             </div>
 

@@ -16,24 +16,25 @@ class InfluencerKycMiddleware {
      */
     public function handle(Request $request, Closure $next) {
         $influencer = authInfluencer();
-        if ($influencer->kv == Status::KYC_UNVERIFIED) {
-            $notify[] = ['error', 'You are not KYC verified. For being KYC verified, please provide these information'];
-            return to_route('influencer.kyc.form')->withNotify($notify);
-        }
-        if ($influencer->kv == Status::KYC_PENDING) {
-            $notify[] = ['warning', 'Your documents for KYC verification is under review. Please wait for admin approval'];
-            return to_route('influencer.home')->withNotify($notify);
-        }
 
-        // Additional Platform KYC requirements: Stripe Onboarding and Tax Details
-        if (!$influencer->stripe_onboarded || !$influencer->stripe_account_id) {
-            $notify[] = ['error', 'Please complete your Stripe onboarding to proceed with withdrawals.'];
-            return to_route('influencer.payment.index')->withNotify($notify);
-        }
+        // Remove legacy check for KYC_PENDING redirects, as we use automated data-driven KYC
 
+        // 1. Check Tax & Address
         if (!$influencer->tax_number || !$influencer->address) {
             $notify[] = ['error', 'Please complete your tax details (IRD/TFN and Address) in profile settings to proceed.'];
             return to_route('influencer.profile.setting')->withNotify($notify);
+        }
+
+        // 2. Check Stripe Onboarding
+        if (!$influencer->stripe_onboarded || !$influencer->stripe_account_id) {
+            $notify[] = ['error', 'Please complete your Stripe onboarding to proceed.'];
+            return to_route('influencer.payment.index')->withNotify($notify);
+        }
+
+        // 3. Auto-sync KYC status if data is present but flag is not set
+        if ($influencer->kv != Status::KYC_VERIFIED) {
+            $influencer->kv = Status::KYC_VERIFIED;
+            $influencer->save();
         }
 
         return $next($request);

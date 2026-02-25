@@ -58,19 +58,19 @@
                                 <div class="col-md-6">
                                     <div class="form-group mb-0">
                                         <label class="form--label fw-bold">@lang('Birth Date')</label>
-                                        <input type="date" class="form-control form--control shadow-none" name="birth_date" value="{{ $influencer->birth_date }}">
+                                        <input type="date" class="form-control form--control shadow-none" name="birth_date" value="{{ $influencer->birth_date }}" required>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-0">
                                         <label class="form--label fw-bold">@lang('Address')</label>
-                                        <input type="text" class="form-control form--control shadow-none" name="address" value="{{ $influencer->address }}">
+                                        <input type="text" class="form-control form--control shadow-none" name="address" value="{{ $influencer->address }}" required>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-0">
                                         <label class="form--label fw-bold">@lang('Region / State')</label>
-                                        <select name="region" class="form-control form--control shadow-none">
+                                        <select name="region" class="form-control form--control shadow-none"required>
                                             <option value="">@lang('Select Region')</option>
                                             @php
                                                 $regions = json_decode(file_get_contents(resource_path('views/partials/regions.json')), true);
@@ -86,19 +86,19 @@
                                 <div class="col-md-6">
                                     <div class="form-group mb-0">
                                         <label class="form--label fw-bold">@lang('City')</label>
-                                        <input type="text" class="form-control form--control shadow-none" name="city" value="{{ $influencer->city }}" placeholder="@lang('e.g. Auckland Central')">
+                                        <input type="text" class="form-control form--control shadow-none" name="city" value="{{ $influencer->city }}" placeholder="@lang('e.g. Auckland Central')"required>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-0">
                                         <label class="form--label fw-bold">@lang('IRD Number / TFN')</label>
-                                        <input type="text" class="form-control form--control shadow-none" name="tax_number" value="{{ $influencer->tax_number }}">
+                                        <input type="text" class="form-control form--control shadow-none" name="tax_number" value="{{ $influencer->tax_number }}"required>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-0">
                                         <label class="form--label fw-bold">@lang('Are you GST/VAT Registered?')</label>
-                                        <select name="is_gst_registered" class="form-control form--control shadow-none">
+                                        <select name="is_gst_registered" class="form-control form--control shadow-none"required>
                                             <option value="0" @selected(!$influencer->is_gst_registered)>@lang('No')</option>
                                             <option value="1" @selected($influencer->is_gst_registered)>@lang('Yes')</option>
                                         </select>
@@ -107,13 +107,13 @@
                                 <div class="col-md-6 {{ $influencer->is_gst_registered ? '' : 'd-none' }}" id="gst-number-container">
                                     <div class="form-group mb-0">
                                         <label class="form--label fw-bold">@lang('GST/VAT Number')</label>
-                                        <input type="text" class="form-control form--control shadow-none" name="gst_number" value="{{ $influencer->gst_number }}">
+                                        <input type="text" class="form-control form--control shadow-none" name="gst_number" value="{{ $influencer->gst_number }}" {{ $influencer->is_gst_registered ? 'required' : '' }}>
                                     </div>
                                 </div>
                                 <div class="col-12">
                                     <div class="form-group mb-0">
                                         <label class="form--label fw-bold">@lang('Bio')</label>
-                                        <textarea name="bio" class="form-control form--control shadow-none" rows="4">{{ $influencer->bio }}</textarea>
+                                        <textarea name="bio" class="form-control form--control shadow-none" rows="4"required>{{ $influencer->bio }}</textarea>
                                     </div>
                                 </div>
                                 <div class="col-12">
@@ -302,6 +302,15 @@
                             <button type="submit" class="btn btn--base w-100 py-3 rounded-pill fs-5 shadow fw-bold">@lang('Save All Changes')</button>
                         </div>
                     </div>
+                    @if ($errors->any())
+    <div class="alert alert-danger mb-4 rounded-4 border-0">
+        <ul class="mb-0">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
                 </form>
             </div>
         </div>
@@ -450,12 +459,14 @@
         $('.select2').select2();
         
         $('select[name="is_gst_registered"]').on('change', function() {
-            if($(this).val() == 1) {
-                $('#gst-number-container').removeClass('d-none');
-            } else {
-                $('#gst-number-container').addClass('d-none');
-            }
-        });
+    if($(this).val() == 1) {
+        $('#gst-number-container').removeClass('d-none');
+        $('input[name="gst_number"]').attr('required', true);
+    } else {
+        $('#gst-number-container').addClass('d-none');
+        $('input[name="gst_number"]').attr('required', false);
+    }
+});
         setupProfilePicPreview("#profilePicUpload1", ".profilePicPreview", 5);
 
                 // --- SORTABLE GALLERY LOGIC ---

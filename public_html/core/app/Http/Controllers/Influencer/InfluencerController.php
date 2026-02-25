@@ -173,12 +173,12 @@ class InfluencerController extends Controller {
             'birth_date'    => 'nullable|date|date_format:Y-m-d|before:tomorrow',
             'category'      => 'nullable|array',
             'social_link'   => 'nullable|array',
-            'social_link.*' => 'nullable|url',
+            'social_link.*' => 'nullable|string', // Changed from url to string for leniency
             'followers'     => 'nullable|array',
             'followers.*'   => 'nullable|integer|min:0',
             'image'         => ['nullable', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png'])],
         ], [
-            'social_link.*' => 'Invalid social link format',
+            'social_link.*.string' => 'Invalid social link format',
         ]);
 
         if ($request->username && preg_match("/[^a-z0-9_]/", trim($request->username))) {

@@ -76,6 +76,12 @@ class StripeConnectController extends Controller
             
             if ($account->details_submitted) {
                 $influencer->stripe_onboarded = true;
+
+                // Auto-verify Influencer if other criteria are met
+                if ($influencer->tax_number && $influencer->address) {
+                    $influencer->kv = \App\Constants\Status::KYC_VERIFIED;
+                }
+
                 $influencer->save();
                 
                 $notify[] = ['success', 'Stripe account connected successfully! You will now receive payments directly.'];

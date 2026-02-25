@@ -123,17 +123,22 @@
                 </div>
             </form>
 
-            {{-- 3. RESULTS --}}
-            <div class="row justify-content-center g-3 g-md-4 mt-4">
-                @include($activeTemplate . 'partials.filtered_campaign')
-                @if ($campaigns->hasPages())
-                    <div class="mt-5">
-                        {{ paginateLinks($campaigns) }}
-                    </div>
-                @endif
-            </div>
-        </div>
+           {{-- 3. RESULTS --}}
+@if ($campaigns->count() > 0)
+    <div class="row justify-content-center g-3 g-md-4 mt-4">
+        @include($activeTemplate . 'partials.filtered_campaign')
     </div>
+    @if ($campaigns->hasPages())
+        <div class="mt-5">
+            {{ paginateLinks($campaigns) }}
+        </div>
+    @endif
+@else
+    <div class="mt-4">
+        @include($activeTemplate . 'partials.empty_animation', ['resetRoute' => route('campaign.all')])
+    </div>
+@endif
+
 
     @if (@$sections->secs != null)
         @foreach (json_decode($sections->secs) as $sec)

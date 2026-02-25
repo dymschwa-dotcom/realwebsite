@@ -75,7 +75,7 @@
 
 
     <div class="row gy-4 justify-content-center">
-        <div class="col-lg-4 col-md-6">
+        <div class="col-lg-6 col-md-6">
             <div class="dashboard-card__two">
                 <div class="dashboard-card__two-header primary">
                     <div class="title">
@@ -95,22 +95,8 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-4 col-md-6">
-            <div class="dashboard-card__two">
-                <div class="dashboard-card__two-header warning">
-                    <div class="title">
-                        <h6>@lang('Current balance')</h6>
-                    </div>
-                    <div class="icon">
-                        <i class="fa-solid fa-money-bill"></i>
-                    </div>
-                </div>
-                <div class="dashboard-card__two-content">
-                    <h4 class="mb-0">{{ showAmount($influencer->balance) }}</h4>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4 col-md-6">
+    
+        <div class="col-lg-6 col-md-6">
             <div class="dashboard-card__two">
                 <div class="dashboard-card__two-header danger">
                     <div class="title">

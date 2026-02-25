@@ -12,20 +12,21 @@
 
                             <form method="POST" action="{{ route('influencer.data.submit') }}" enctype="multipart/form-data">
                                 @csrf
-                                <div class="dashboard-edit-profile__thumb mb-4">
-                                    <div class="file-upload">
-                                        <label class="edit-pen" for="update-photo"><i class="lar la-edit"></i></label>
-                                        <input class="form-control form--control" id="update-photo" name="image" type="file" hidden="" accept=".jpg,.jpeg,.png">
-                                    </div>
-                                    <div class="upload-img-box">
-                                        <img id="upload-img" src="{{ getImage(getFilePath('influencer') . '/' . $influencer->image, avatar: true) }}" alt="@lang('image')">
-                                    </div>
-                                </div>
-                                <div class="text-center">
-                                    <label class="form--label mb-0">@lang('Upload Profile')<span
-                                              class="text--danger">*</span></label><br>
-                                    <small>@lang('File type will be .jpg, .jpeg, .png')</small>
-                                </div>
+                                <div class="dashboard-edit-profile__thumb mb-2">
+    <div class="file-upload">
+        <input class="form-control form--control" id="update-photo" name="image" type="file" hidden="" accept=".jpg,.jpeg,.png">
+    </div>
+    <div class="upload-img-box">
+        <img id="upload-img" src="{{ getImage(getFilePath('influencer') . '/' . $influencer->image, avatar: true) }}" alt="@lang('image')">
+    </div>
+</div>
+<div class="text-center mb-4">
+    <label for="update-photo" class="btn btn--base btn--sm px-4 rounded-pill">
+        <i class="las la-camera"></i> @lang('Upload Photo')
+    </label>
+    <p class="mt-2"><small>@lang('Supported'): .jpg, .jpeg, .png</small></p>
+</div>
+
                                 <div class="row mt-4">
                                     <div class="col-md-12">
                                         <div class="form-group">
@@ -325,4 +326,8 @@ updateRegions($('select[name=country]').val());
         }
     </style>
 @endpush
+
+
+
+
 

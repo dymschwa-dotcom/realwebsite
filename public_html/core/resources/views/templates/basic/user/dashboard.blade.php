@@ -3,74 +3,10 @@
     <div class="row justify-content-center">
         <div class="col-md-12">
             <div class="notice"></div>
-            @php
-                $kyc = getContent('brand_kyc.content', true);
-            @endphp
-
-            @if (auth()->user()->kv == Status::KYC_UNVERIFIED && auth()->user()->kyc_rejection_reason)
-                <div class="alert alert--danger mb-4" role="alert">
-                    <div class="alert__icon"><i class="fas fa-file-signature"></i></div>
-                    <p class="alert__message">
-                        <span class="fw-bold">@lang('KYC Documents Rejected')</span><br>
-                        <small>
-                            <i>{{ __(@$kyc->data_values->reject) }}
-                                <a class="link-color" data-bs-toggle="modal" data-bs-target="#kycRejectionReason"
-                                   href="javascript::void(0)">@lang('Click here')</a> @lang('to show the reason').
-
-                                <a class="link-color" href="{{ route('user.kyc.form') }}">@lang('Click Here')</a>
-                                @lang('to Re-submit Documents'). <br>
-                                <a class="link-color" href="{{ route('user.kyc.data') }}">@lang('See KYC Data')</a>
-                            </i>
-                        </small>
-                    </p>
-                </div>
-            @elseif (auth()->user()->kv == Status::KYC_UNVERIFIED)
-                <div class="alert alert--info mb-4" role="alert">
-                    <div class="alert__icon"><i class="fas fa-file-signature"></i></div>
-                    <p class="alert__message">
-                        <span class="fw-bold">@lang('KYC Verification Required')</span><br>
-                        <small>
-                            <i>{{ __(@$kyc->data_values->required) }}
-                                <a class="link-color" href="{{ route('user.kyc.form') }}">@lang('Click here')</a>
-                                @lang('to submit KYC information').
-                            </i>
-                        </small>
-                    </p>
-                </div>
-            @elseif(auth()->user()->kv == Status::KYC_PENDING)
-                <div class="alert alert--warning mb-4" role="alert">
-                    <div class="alert__icon"><i class="fas fa-user-check"></i></div>
-                    <p class="alert__message">
-                        <span class="fw-bold">@lang('KYC Verification Pending')</span><br>
-                        <small>
-                            <i>{{ __(@$kyc->data_values->pending) }} <a class="link-color"
-                                   href="{{ route('user.kyc.data') }}">@lang('Click here')</a>
-                                @lang('to see your submitted information')
-                            </i>
-                        </small>
-                    </p>
-                </div>
-            @endif
-        </div>
-    </div>
+            
 
     <div class="row gy-4">
-        <div class="col-xl-4 col-lg-6 col-sm-6">
-            <div class="dashboard-card">
-                <div class="dashboard-card__content">
-                    <p class="dashboard-card__title">@lang('Balance')</p>
-                    <h4 class="dashboard-card__amount">{{ showAmount(auth()->user()->balance) }}</h4>
-                </div>
-                <a href="{{ route('user.campaign.approved') }}" class="dashboard-card__icon card--primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" height="512" x="0" y="0" viewBox="0 0 24 24" style="enable-background:new 0 0 512 512" xml:space="preserve" class="">
-                        <g>
-                            <path fill="" fill-rule="evenodd" d="M12.893 2.875c-.414-.118-.876-.125-2.093-.125H4a1.25 1.25 0 1 0 0 2.5h11.5l-.18-.24c-.73-.973-1.013-1.339-1.355-1.599a3.25 3.25 0 0 0-1.072-.536zm4.482 2.375-.855-1.14-.068-.09c-.639-.852-1.05-1.401-1.58-1.804a4.75 4.75 0 0 0-1.568-.783c-.64-.183-1.326-.183-2.39-.183H4A2.75 2.75 0 0 0 1.25 4v13.232c0 .813 0 1.469.043 2 .045.546.14 1.026.366 1.47a3.75 3.75 0 0 0 1.639 1.64c.444.226.924.32 1.47.365.531.043 1.187.043 2 .043h10.464c.813 0 1.469 0 2-.043.546-.045 1.026-.14 1.47-.366a3.75 3.75 0 0 0 1.64-1.638c.226-.445.32-.925.365-1.471.043-.531.043-1.187.043-2v-6.464c0-.813 0-1.469-.043-2-.045-.546-.14-1.026-.366-1.47a3.75 3.75 0 0 0-1.639-1.64c-.444-.226-.924-.32-1.47-.365-.5-.04-1.11-.043-1.857-.043zM4 6.75c-.45 0-.875-.108-1.25-.3V17.2c0 .853 0 1.447.038 1.91.037.453.107.714.207.912.216.423.56.767.984.983.197.1.458.17.912.207.462.037 1.057.038 1.909.038h10.4c.853 0 1.447 0 1.91-.038.453-.037.714-.107.911-.207a2.25 2.25 0 0 0 .984-.983c.1-.198.17-.459.207-.913.029-.357.036-.794.037-1.367a3.75 3.75 0 0 1 0-7.484 18.388 18.388 0 0 0-.037-1.367c-.038-.454-.107-.715-.207-.912a2.25 2.25 0 0 0-.984-.984c-.197-.1-.458-.17-.912-.207-.462-.037-1.057-.038-1.909-.038zm17.25 5.014a2.25 2.25 0 0 0 0 4.472zm-11.2-.364a.75.75 0 0 1 1.05.15l1.5 2c.2.267.2.633 0 .9l-1.5 2a.75.75 0 1 1-1.2-.9l.6-.8H7a.75.75 0 0 1 0-1.5h3.5l-.6-.8a.75.75 0 0 1 .15-1.05z" clip-rule="evenodd" opacity="1" data-original="" class=""></path>
-                        </g>
-                    </svg>
-                </a>
-            </div>
-        </div>
-        <div class="col-xl-4 col-lg-6 col-sm-6">
+        <div class="col-xl-6 col-lg-6 col-sm-6">
             <div class="dashboard-card">
                 <div class="dashboard-card__content">
                     <p class="dashboard-card__title">@lang('Total spending')</p>
@@ -88,7 +24,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-xl-4 col-lg-12">
+        <div class="col-xl-6 col-lg-12 col-sm-6">
             <div class="dashboard-card">
                 <div class="dashboard-card__content">
                     <p class="dashboard-card__title">@lang('Total hired')</p>
@@ -195,20 +131,6 @@
         </div>
     </div>
 
-    @if (auth()->user()->kv == Status::KYC_UNVERIFIED && auth()->user()->kyc_rejection_reason)
-        <div class="modal fade" id="kycRejectionReason">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">@lang('KYC Document Rejection Reason')</h5>
-                        <button class="btn-close" data-bs-dismiss="modal" type="button" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>{{ auth()->user()->kyc_rejection_reason }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
+    
 @endsection
 

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Influencer;
 
 use App\Http\Controllers\Controller;
-use App\Lib\SocialConnect;
 use App\Models\Category;
 use App\Models\ProfileGallery;
 use App\Rules\FileTypeValidate;
@@ -12,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller {
+    
     public function profile() {
         $pageTitle    = "Profile Setting";
         $influencer   = auth()->guard('influencer')->user();
@@ -27,8 +27,8 @@ class ProfileController extends Controller {
         $request->validate([
             'firstname'    => 'required|string',
             'lastname'     => 'required|string',
-            'address'      => 'nullable|string|max:255',
-            'tax_number'   => ['nullable', 'string', 'max:12', 'regex:/^[0-9]{2,3}-?[0-9]{3}-?[0-9]{3}$/'],
+            'address'      => 'required|string|max:255',
+            'tax_number'   => ['required', 'string', 'max:12', 'regex:/^[0-9]{2,3}-?[0-9]{3}-?[0-9]{3}$/'],
             'is_gst_registered' => 'nullable|boolean',
             'gst_number'   => ['required_if:is_gst_registered,1', 'nullable', 'string', 'max:12', 'regex:/^[0-9]{2,3}-?[0-9]{3}-?[0-9]{3}$/'],
             'category'     => 'required|array|min:1',
@@ -51,14 +51,18 @@ class ProfileController extends Controller {
             'images'       => 'nullable|array',
             'images.*'     => ['nullable', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png'])],
             'region'       => 'nullable|string',
+            'video_url'    => 'nullable|string|max:255', // Lenient string validation
         ], [
-            'firstname.required' => 'The first name field is required',
-            'lastname.required'  => 'The last name field is required',
-            'image.max' => 'Profile image may not be greater than 5MB',
+            'firstname.required'  => 'The first name field is required',
+            'lastname.required'   => 'The last name field is required',
+            'address.required'    => 'The address field is required for KYC compliance',
+            'tax_number.required' => 'The IRD/TFN tax number is required for payments',
+            'image.max'           => 'Profile image may not be greater than 5MB',
         ]);
 
         $influencer = authInfluencer();
 
+        // Handle Profile Image
         if ($request->hasFile('image')) {
             try {
                 $old               = $influencer->image;
@@ -85,7 +89,14 @@ class ProfileController extends Controller {
             $influencer->categories()->sync($request->category);
         }
 
-        $influencer->save(); // Save basic info first
+        // Automated KYC Status Sync
+        if ($request->tax_number && $request->address && $influencer->stripe_onboarded) {
+            $influencer->kv = \App\Constants\Status::KYC_VERIFIED;
+        } else {
+            $influencer->kv = \App\Constants\Status::KYC_UNVERIFIED;
+        }
+
+        $influencer->save();
 
         // Handle Social Links
         if ($request->social_link) {
@@ -101,19 +112,14 @@ class ProfileController extends Controller {
             }
         }
 
-        // Handle Packages - LOGIC FIXED
+        // Handle Packages
         $keepPackageIds = [];
-        
         if ($request->package && is_array($request->package)) {
             foreach ($request->package as $item) {
-                // Skip empty rows (if name is missing, assume row is invalid/empty)
                 if (empty($item['name'])) continue;
-
                 if (!empty($item['id'])) {
-                    // Update existing
                     $package = \App\Models\InfluencerPackage::where('influencer_id', $influencer->id)->find($item['id']);
                 } else {
-                    // Create new
                     $package = new \App\Models\InfluencerPackage();
                     $package->influencer_id = $influencer->id;
                 }
@@ -127,16 +133,11 @@ class ProfileController extends Controller {
                     $package->post_count = $item['post_count'] ?? 1;
                     $package->video_length = $item['video_length'] ?? 0;
                     $package->save();
-                    
                     $keepPackageIds[] = $package->id;
                 }
             }
         }
-
-        // Delete any packages that belong to this influencer but were NOT in the submitted list
-        \App\Models\InfluencerPackage::where('influencer_id', $influencer->id)
-            ->whereNotIn('id', $keepPackageIds)
-            ->delete();
+        \App\Models\InfluencerPackage::where('influencer_id', $influencer->id)->whereNotIn('id', $keepPackageIds)->delete();
 
         // Handle Gallery Images
         if ($request->hasFile('images')) {
@@ -148,9 +149,8 @@ class ProfileController extends Controller {
                     $gallery->influencer_id = $influencer->id;
                     $gallery->image         = $newImage;
                     $gallery->sort_order    = ++$lastSortOrder;
-            $gallery->save();
-                } catch (\Exception $exp) {
-                }
+                    $gallery->save();
+                } catch (\Exception $exp) { }
             }
         }
 
@@ -161,13 +161,11 @@ class ProfileController extends Controller {
             $gallery->influencer_id = $influencer->id;
             $gallery->video_url = $request->video_url;
             $gallery->sort_order = ++$lastSortOrder;
-
             $path = getFilePath('profileGallery');
 
             if (strpos($request->video_url, 'youtube.com') !== false || strpos($request->video_url, 'youtu.be') !== false) {
                 $gallery->video_type = 'youtube';
                 $thumbUrl = $this->getYoutubeThumbnail($request->video_url);
-                
                 if ($thumbUrl && $thumbUrl != 'default_video.jpg') {
                     try {
                         $contents = file_get_contents($thumbUrl);
@@ -175,28 +173,17 @@ class ProfileController extends Controller {
                         if (!file_exists($path)) { mkdir($path, 0755, true); }
                         file_put_contents($path . '/' . $filename, $contents);
                         $gallery->image = $filename;
-                    } catch (\Exception $e) {
-                        $gallery->image = 'default_video.jpg';
-    }
-        } else {
-                    $gallery->image = 'default_video.jpg';
-                }
+                    } catch (\Exception $e) { $gallery->image = 'default_video.jpg'; }
+                } else { $gallery->image = 'default_video.jpg'; }
             } else {
                 $gallery->video_type = 'link';
                 $gallery->image = 'default_video.jpg';
-    }
+            }
             $gallery->save();
         }
 
         recentActivity('Profile updated successfully', 0, $influencer->id);
-        
         $notify[] = ['success', 'Profile updated successfully'];
-
-        if (session()->has('redirect_after_profile_completion')) {
-            $redirectUrl = session()->pull('redirect_after_profile_completion');
-            return redirect($redirectUrl)->withNotify($notify);
-        }
-
         return back()->withNotify($notify);
     }
 
@@ -206,7 +193,6 @@ class ProfileController extends Controller {
     }
 
     public function submitPassword(Request $request) {
-
         $passwordValidation = Password::min(6);
         if (gs('secure_password')) {
             $passwordValidation = $passwordValidation->mixedCase()->numbers()->symbols()->uncompromised();
@@ -218,50 +204,43 @@ class ProfileController extends Controller {
 
         $influencer = auth()->guard('influencer')->user();
         if (Hash::check($request->current_password, $influencer->password)) {
-            $password             = Hash::make($request->password);
-            $influencer->password = $password;
+            $influencer->password = Hash::make($request->password);
             $influencer->save();
             $notify[] = ['success', 'Password changed successfully'];
             return back()->withNotify($notify);
         } else {
-            $notify[] = ['error', 'The password doesn\'t match!'];
+            $notify[] = ['error', 'The current password doesn\'t match!'];
             return back()->withNotify($notify);
+        }
     }
-}
 
     public function remove($id) {
         $gallery = ProfileGallery::where('influencer_id', authInfluencerId())->findOrFail($id);
-        
         if ($gallery->image && !$gallery->video_url) {
             $path = getFilePath('profileGallery') . '/' . $gallery->image;
             @unlink($path);
         }
-        
         $gallery->delete();
 
-        // Reorder remaining items
         $galleries = ProfileGallery::where('influencer_id', authInfluencerId())->orderBy('sort_order', 'asc')->get();
         foreach($galleries as $key => $item) {
             $item->sort_order = $key + 1;
             $item->save();
         }
-
         $notify[] = ['success', 'Item removed successfully'];
         return back()->withNotify($notify);
     }
-    
+
     public function updateGalleryOrder(Request $request) {
         $request->validate([
             'order' => 'required|array',
             'order.*' => 'integer|exists:profile_galleries,id'
         ]);
-
         foreach ($request->order as $index => $id) {
             \App\Models\ProfileGallery::where('influencer_id', authInfluencerId())
                 ->where('id', $id)
                 ->update(['sort_order' => $index + 1]);
         }
-
         return response()->json(['success' => true]);
     }
 
@@ -272,19 +251,15 @@ class ProfileController extends Controller {
         } elseif (preg_match('/youtube\.com.*v=([a-zA-Z0-9_-]+)/', $url, $matches)) {
             $videoId = $matches[1];
         }
-        
-        if ($videoId) {
-            return "https://img.youtube.com/vi/{$videoId}/hqdefault.jpg";
-        }
-        return 'default_video.jpg';
+        return $videoId ? "https://img.youtube.com/vi/{$videoId}/hqdefault.jpg" : 'default_video.jpg';
     }
-    
+
     public function galleryStore(Request $request) {
         $request->validate([
             'gallery_image' => ['required', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png']), 'max:10240'],
         ], [
             'gallery_image.max' => 'Gallery images may not be greater than 10MB',
         ]);
+        // Handle standalone upload if needed, otherwise logic is in submitProfile
     }
 }
-

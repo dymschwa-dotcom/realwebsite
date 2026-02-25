@@ -23,7 +23,7 @@ class ProfileController extends Controller
             'firstname' => 'required|string',
             'lastname'  => 'required|string',
             'brand_name' => 'required|string|max:40',
-            'website'    => 'required|url|max:255',
+            'website'    => 'required|string|max:255', // Changed from url to string for leniency
             'company_name' => 'required|string|max:255',
             'image'      => ['nullable', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png']), 'max:5120'],
         ], [
@@ -49,6 +49,15 @@ class ProfileController extends Controller
                 $notify[] = ['error', 'Couldn\'t upload your image'];
                 return back()->withNotify($notify);
             }
+        }
+
+        // Custom KYC Logic for Brands
+        // Criteria: brand_name + website + company_name + address (Stripe first purchase details)
+        // GST number is optional for brands but good to have if provided
+        if ($user->brand_name && $user->website && $user->company_name && $user->address) {
+            $user->kv = \App\Constants\Status::KYC_VERIFIED;
+        } else {
+            $user->kv = \App\Constants\Status::KYC_UNVERIFIED;
         }
 
         $user->save();

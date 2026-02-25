@@ -8,14 +8,25 @@
             'food'      => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=800&auto=format&fit=crop',
             'travel'    => 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=800&auto=format&fit=crop',
             'fitness'   => 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=800&auto=format&fit=crop',
-            'default'   => 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop' 
+        ];
+        
+        $randomPool = [
+            'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=800&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=800&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=800&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1523240715639-9a67105471f0?q=80&w=800&auto=format&fit=crop'
         ];
 
         $campaignImage = $campaign->image ? getImage(getFilePath('campaign') . '/' . $campaign->image, getFileSize('campaign')) : null;
 
         if (!$campaignImage || str_contains($campaignImage, 'default.png') || str_contains($campaignImage, 'placeholder')) {
             $firstCategory = $campaign->categories->first()?->slug;
-            $campaignImage = $fallbacks[$firstCategory] ?? $fallbacks['default'];
+            if (isset($fallbacks[$firstCategory])) {
+                $campaignImage = $fallbacks[$firstCategory];
+            } else {
+                $campaignImage = $randomPool[$loop->index % count($randomPool)];
+            }
         }
     @endphp
 
@@ -112,3 +123,5 @@
         border: 1px solid rgba(255,255,255,0.3);
     }
 </style>
+
+
