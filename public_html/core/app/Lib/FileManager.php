@@ -218,7 +218,7 @@ class FileManager
 
 	    if ($this->thumb) {
 	    	if (!$path) $path = $this->path . '/thumb_' . $this->old;
-	    	file_exists($path) && is_file($path) ? @unlink($path) : false;
+	    	file_exists($path) && is_file($path) ? @unlink($path) : false; 
 	    }
 	}
 
