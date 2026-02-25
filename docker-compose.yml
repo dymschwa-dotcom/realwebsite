@@ -5,8 +5,13 @@ services:
     env_file: .env
     ports:
       - "8181:80"
-   # volumes:
-   #   - ./public_html:/var/www/html 
+    volumes:
+    # - ./public_html:/var/www/html 
+    # This saves your logos and site images
+      - /data/coolify/applications/cs8sc4swoc4c0cwg4cwwgwsg/assets:/var/www/html/assets/images
+      # This saves user uploads and system files
+      - /data/coolify/applications/cs8sc4swoc4c0cwg4cwwgwsg/storage:/var/www/html/core/storage/app
+
     depends_on:
       - db
 
