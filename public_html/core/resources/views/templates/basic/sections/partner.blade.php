@@ -20,11 +20,6 @@
                 ];
             @endphp
 
-            @if($partners->count() > 0)
-                @foreach ($partners as $partner)
-                <img src="{{ frontendImage('partner', @$partner->data_values->image, '120x30') }}" alt="image">
-            @endforeach
-            @else
                 @foreach($hardcodedPartners as $index => $partner)
                     <div class="partner-text-logo-wrapper">
                         <div class="partner-text-logo"
@@ -43,7 +38,6 @@
                         </div>
                     </div>
                 @endforeach
-            @endif
         </div>
     </div>
 </div>
