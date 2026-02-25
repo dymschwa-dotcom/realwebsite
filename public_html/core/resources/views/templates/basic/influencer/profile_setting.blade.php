@@ -14,8 +14,8 @@
                                 <label class="form--label fw-bold">@lang('Profile Image')</label>
                                 <div class="image-upload position-relative">
                                     <div class="thumb">
-                                        <div class="avatar-preview shadow-sm">
-                                            <div class="profilePicPreview" style="background-image: url({{ getImage(getFilePath('influencer') . '/' . $influencer->image, getFileSize('influencer')) }})">
+                                        <div class="avatar-preview shadow-sm" style="aspect-ratio: 1 / 1; height: auto;">
+                                            <div class="profilePicPreview" style="background-image: url({{ getImage(getFilePath('influencer') . '/' . $influencer->image, getFileSize('influencer')) }}); background-position: center 20%;">
                                             </div>
                                         </div>
                                         <div class="avatar-edit mt-3">

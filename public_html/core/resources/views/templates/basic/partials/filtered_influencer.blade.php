@@ -65,6 +65,7 @@
         width: 100% !important;
         height: 100% !important;
         object-fit: cover !important;
+        object-position: center 20% !important;
         transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
         display: block;
     }

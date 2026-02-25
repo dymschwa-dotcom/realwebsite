@@ -331,6 +331,7 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
+        object-position: center 20%;
         transition: scale 0.4s ease;
     }
     .influencer-card:hover .influencer-card__img {
