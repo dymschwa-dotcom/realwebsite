@@ -75,7 +75,10 @@ class FrontendController extends Controller
 
     public function frontendContent(Request $request, $key)
     {
-        $purifier = new \HTMLPurifier();
+        $config = \HTMLPurifier_Config::createDefault();
+        $config->set('Cache.DefinitionImpl', null);
+        $purifier = new \HTMLPurifier($config);
+
         $valInputs = $request->except('_token', 'image_input', 'key', 'status', 'type', 'id','slug');
         foreach ($valInputs as $keyName => $input) {
             if (gettype($input) == 'array') {
@@ -288,3 +291,4 @@ class FrontendController extends Controller
 
 
 }
+

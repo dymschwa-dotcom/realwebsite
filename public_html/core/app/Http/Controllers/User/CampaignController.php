@@ -296,7 +296,9 @@ class CampaignController extends Controller {
             return response()->json(['error' => $validator->errors()->all()]);
         }
 
-        $purifier                   = new \HTMLPurifier();
+        $config = \HTMLPurifier_Config::createDefault();
+        $config->set('Cache.DefinitionImpl', null);
+        $purifier = new \HTMLPurifier($config);
         $campaign->description      = htmlspecialchars_decode($purifier->purify($request->description));
         $campaign->review_process   = $request->review_process;
         $campaign->approval_process = $request->approval_process;
