@@ -28,6 +28,9 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && chmod -R 775 /var/www/html/core/storage \
     && chmod -R 775 /var/www/html/core/bootstrap/cache \
+    && mkdir -p /var/www/html/core/vendor/ezyang/htmlpurifier/library/HTMLPurifier/DefinitionCache/Serializer \
+    && chown -R www-data:www-data /var/www/html/core/vendor/ezyang/htmlpurifier/library/HTMLPurifier/DefinitionCache/Serializer \
+    && chmod -R 775 /var/www/html/core/vendor/ezyang/htmlpurifier/library/HTMLPurifier/DefinitionCache/Serializer \
     && chown www-data:www-data /var/www/html/core/.env
 
 # 9. Set working directory to where composer.json lives

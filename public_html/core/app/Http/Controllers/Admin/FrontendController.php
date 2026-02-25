@@ -39,7 +39,7 @@ class FrontendController extends Controller
         $general->active_template = $request->name;
         $general->save();
 
-        $notify[] = ['success', strtoupper($request->name).' template activated successfully'];
+        $notify[] = ['success', strtoupper($request->name).' template activated successfully';
         return back()->withNotify($notify);
     }
 
@@ -75,7 +75,14 @@ class FrontendController extends Controller
 
     public function frontendContent(Request $request, $key)
     {
-        $purifier = new \HTMLPurifier();
+        $purifierConfig = \HTMLPurifier_Config::createDefault();
+        $purifierCachePath = storage_path('app/purifier');
+        if (!file_exists($purifierCachePath)) {
+            mkdir($purifierCachePath, 0775, true);
+        }
+        $purifierConfig->set('Cache.SerializerPath', $purifierCachePath);
+        $purifier = new \HTMLPurifier($purifierConfig);
+
         $valInputs = $request->except('_token', 'image_input', 'key', 'status', 'type', 'id','slug');
         foreach ($valInputs as $keyName => $input) {
             if (gettype($input) == 'array') {
@@ -288,3 +295,4 @@ class FrontendController extends Controller
 
 
 }
+
