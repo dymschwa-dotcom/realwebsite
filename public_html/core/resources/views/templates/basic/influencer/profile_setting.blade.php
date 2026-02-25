@@ -292,6 +292,11 @@
                                         <div class="input-group px-3">
                                             <input type="url" name="video_url" class="form-control form--control shadow-none bg-white border" placeholder="https://youtube.com/watch?v=...">
                                         </div>
+                                        <div class="col-12 mt-3">
+                                <div class="row g-3" id="new-gallery-previews">
+                                    {{-- Cropped previews will appear here --}}
+                                </div>
+                            </div>
                                         <small class="text-muted mt-2">@lang('Saved when you click "Save All Changes"')</small>
                                     </div>
                                 </div>
@@ -366,6 +371,27 @@
         </div>
         @endif
     <x-confirmation-modal />
+
+    <!-- PASTE AT THE VERY BOTTOM BEFORE @endsection -->
+<div class="modal fade" id="cropModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@lang('Adjust Your Photo')</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <img id="cropImage" src="" style="max-width: 100%;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@lang('Cancel')</button>
+                <button type="button" class="btn btn--base" id="saveCrop">@lang('Apply Crop')</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('style')
@@ -622,4 +648,5 @@
     })(jQuery);
 </script>
 @endpush
+
 
