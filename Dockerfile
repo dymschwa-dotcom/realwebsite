@@ -16,19 +16,19 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 # 5. Enable 'mod_rewrite'
 RUN a2enmod rewrite
 
-# 5.1 Configure PHP settings for larger uploads
+# 6. Configure PHP settings for larger uploads
 RUN echo "upload_max_filesize=64M" > /usr/local/etc/php/conf.d/uploads.ini \
     && echo "post_max_size=64M" >> /usr/local/etc/php/conf.d/uploads.ini \
     && echo "memory_limit=256M" >> /usr/local/etc/php/conf.d/uploads.ini
 
-# 6. Copy your local website files
+# 7. Copy your local website files
 COPY ./public_html /var/www/html/
 
-# 7. Create the placeholder .env and installed lock
+# 8. Set up application environment
 RUN cp /var/www/html/core/.env.example /var/www/html/core/.env \
     && touch /var/www/html/core/storage/installed
 
-# 8. Set the correct permissions
+# 9. Set the correct permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && chmod -R 775 /var/www/html/core/storage \
@@ -37,12 +37,9 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 /var/www/html/assets/images \
     && chown www-data:www-data /var/www/html/core/.env
 
-# 9. Set working directory to where composer.json lives
+# 10. Install dependencies
 WORKDIR /var/www/html/core
-
-# 10. Install dependencies (Added --no-scripts to prevent build crashes)
 RUN composer install --no-interaction --optimize-autoloader --no-dev --no-scripts
 
 # 11. Final setup
 WORKDIR /var/www/html
-
