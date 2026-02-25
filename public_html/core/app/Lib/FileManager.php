@@ -174,7 +174,7 @@ class FileManager
 	public function makeDirectory($location = null){
 		if (!$location) $location = $this->path;
 		if (file_exists($location)) return true;
-    	return mkdir($location, 0755, true);
+    	return mkdir($location, 0775, true);
 	}
 
     /**
