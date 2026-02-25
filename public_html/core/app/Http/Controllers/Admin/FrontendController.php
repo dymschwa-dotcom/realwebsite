@@ -172,7 +172,7 @@ class FrontendController extends Controller
         }
 
         $notify[] = ['success', 'Content updated successfully'];
-        return back()->withNotify($notify); 
+        return back()->withNotify($notify);
     }
 
 
