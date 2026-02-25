@@ -1,13 +1,38 @@
 @php
     $testimonialContent = getContent('testimonial.content', true);
-    $testimonials = getContent('testimonial.element', orderById: true);
+    $testimonials = [
+        [
+            'name' => 'Sarah Jenkins',
+            'designation' => 'Marketing Director at GloWave',
+            'quote' => 'Collabstar has completely transformed how we handle influencer campaigns. The workflow is seamless and the influencers we find are high-quality.',
+            'image' => 'https://i.pravatar.cc/100?u=sarah'
+        ],
+        [
+            'name' => 'Michael Chen',
+            'designation' => 'Independent Content Creator',
+            'quote' => 'As a creator, I love how easy it is to manage my collaborations. The automated payout system is a lifesaver and very transparent.',
+            'image' => 'https://i.pravatar.cc/100?u=michael'
+        ],
+        [
+            'name' => 'Elena Rodriguez',
+            'designation' => 'Founder of Bloom Skincare',
+            'quote' => 'Finding niche influencers was always a struggle until we started using this platform. Our ROI has increased by 40% since joining.',
+            'image' => 'https://i.pravatar.cc/100?u=elena'
+        ],
+        [
+            'name' => 'David Smith',
+            'designation' => 'Social Media Manager',
+            'quote' => 'The data and analytics provided for each campaign help us optimize our budget efficiently. It\'s an essential tool for any agency.',
+            'image' => 'https://i.pravatar.cc/100?u=david'
+        ]
+    ];
 @endphp
 <section class="testimonials py-120 section-bg">
     <div class="container">
         <div class="row">
             <div class="col-lg-12">
                 <div class="section-heading style-center">
-                    <h2 class="section-heading__title">{{ __(@$testimonialContent->data_values->heading) }}</h2>
+                    <h2 class="section-heading__title">{{ __(@$testimonialContent->data_values->heading ?? 'What Our Clients Say') }}</h2>
                 </div>
             </div>
         </div>
@@ -19,15 +44,15 @@
                         <div class="testimonial-item__content">
                             <div class="testimonial-item__info">
                                 <div class="testimonial-item__thumb">
-                                    <img src="{{ frontendImage('testimonial', @$testimonial->data_values->image, '100x100') }}" alt="image">
+                                    <img src="{{ $testimonial['image'] }}" alt="image">
                                 </div>
                                 <div class="testimonial-item__details">
-                                    <h5 class="testimonial-item__name">{{ __(@$testimonial->data_values->name) }}</h5>
-                                    <span class="testimonial-item__designation">{{ __(@$testimonial->data_values->designation) }}</span>
+                                    <h5 class="testimonial-item__name">{{ __($testimonial['name']) }}</h5>
+                                    <span class="testimonial-item__designation">{{ __($testimonial['designation']) }}</span>
                                 </div>
                             </div>
                         </div>
-                        <p class="testimonial-item__desc">{{ __(@$testimonial->data_values->quote) }}</p>
+                        <p class="testimonial-item__desc">{{ __($testimonial['quote']) }}</p>
                     </div>
                 </div>
             @endforeach
@@ -71,3 +96,4 @@
         })(jQuery);
     </script>
 @endpush
+
