@@ -296,13 +296,7 @@ class CampaignController extends Controller {
             return response()->json(['error' => $validator->errors()->all()]);
         }
 
-        $purifierConfig = \HTMLPurifier_Config::createDefault();
-        $purifierCachePath = storage_path('app/purifier');
-        if (!file_exists($purifierCachePath)) {
-            mkdir($purifierCachePath, 0775, true);
-        }
-        $purifierConfig->set('Cache.SerializerPath', $purifierCachePath);
-        $purifier                   = new \HTMLPurifier($purifierConfig);
+        $purifier                   = new \HTMLPurifier();
         $campaign->description      = htmlspecialchars_decode($purifier->purify($request->description));
         $campaign->review_process   = $request->review_process;
         $campaign->approval_process = $request->approval_process;
