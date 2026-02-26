@@ -168,6 +168,11 @@
 
                                 <div class="col-sm-12">
                                     <button class="btn btn--base w-100" type="submit">@lang('Submit')</button>
+                                    <div class="col-sm-12 text-center mt-3">
+                                    <p class="mb-0 text-muted">@lang('Wrong account type?') 
+                                    <a href="{{ route('influencer.logout') }}" class="text--base fw-bold">@lang('Click here to cancel and sign up as a Brand')</a>
+                                    </p>
+                                </div>
                                 </div>
                             </form>
                         </div>

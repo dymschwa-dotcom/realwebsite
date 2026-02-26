@@ -170,7 +170,7 @@ class UserController extends Controller {
             'username'     => 'required|unique:users|min:6',
             'mobile'       => 'required',
             'brand_name'   => 'required|string|max:40',
-            'website'      => 'required|url|max:255',
+            'website'      => 'required|string|max:255',
             'image'        => ['required', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png'])],
             'company_name'  => 'nullable|string|max:255',
             ]);
