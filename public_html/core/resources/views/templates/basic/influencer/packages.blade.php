@@ -14,6 +14,7 @@
                                 @csrf
                                 @php
                                     $platforms = \App\Models\Platform::active()->get();
+                                    $connectedPlatforms = $influencer->socialLink->pluck('platform_id')->toArray();
                                 @endphp
                                 <h4 class="mb-3">@lang('Packages')</h4>
                                 <div class="row">
@@ -30,10 +31,12 @@
                                                     </div>
                                                     <div class="form-group mb-2">
                                                         <label class="form--label">@lang('Platform')</label>
-                                                        <select name="package[{{ $i }}][platform_id]" class="form-control form--control">
+                                                        <select name="package[{{ $i }}][platform_id]" class="form-control form--control" required>
                                                             <option value="">@lang('Select One')</option>
                                                             @foreach($platforms as $platform)
+                                                                @if(in_array($platform->id, $connectedPlatforms))
                                                                 <option value="{{ $platform->id }}" @selected(old("package.$i.platform_id") == $platform->id)>{{ __($platform->name) }}</option>
+                                                                @endif
                                                             @endforeach
                                                         </select>
                                                     </div>

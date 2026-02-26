@@ -158,6 +158,7 @@
                                                            placeholder="@lang('Followers')"
                                                            data-platform-id="{{ $platform->id }}">
                                                 </div>
+                                                <small class="text-muted d-none one-social-required-msg text-danger">@lang('At least one social link/follower count is required.')</small>
                                             </div>
                                         </div>
                                     </div>
@@ -524,6 +525,8 @@
             // Hide all options first
             $('.platform-option').hide().removeClass('visible');
             
+            let hasAtLeastOneSocial = false;
+
             // Loop through social inputs
             $('.social-link-input').each(function() {
                 const platformId = $(this).data('platform-id');
@@ -532,8 +535,16 @@
                 // If link exists, show this platform in all package dropdowns
                 if(linkValue && linkValue.trim() !== '') {
                     $('.platform-' + platformId).show().addClass('visible');
+                    hasAtLeastOneSocial = true;
                 }
             });
+
+            // Show feedback message if no social link is filled
+            if (!hasAtLeastOneSocial) {
+                $('.one-social-required-msg').removeClass('d-none');
+            } else {
+                $('.one-social-required-msg').addClass('d-none');
+            }
 
             // Reset dropdowns if selected value is now hidden
             $('.package-platform-select').each(function() {
@@ -550,6 +561,25 @@
         // Run on social link change
         $(document).on('input', '.social-link-input', function() {
             updatePlatformOptions();
+        });
+
+        // Form submission validation
+        $('form').on('submit', function(e) {
+            let hasAtLeastOneSocial = false;
+            $('.social-link-input').each(function() {
+                if($(this).val() && $(this).val().trim() !== '') {
+                    hasAtLeastOneSocial = true;
+                }
+            });
+
+            if (!hasAtLeastOneSocial) {
+                e.preventDefault();
+                alert("@lang('Please add at least one social media link before saving.')");
+                $('.one-social-required-msg').removeClass('d-none');
+                $('html, body').animate({
+                    scrollTop: $(".one-social-required-msg").offset().top - 200
+                }, 1000);
+            }
         });
 
         // --- DYNAMIC PACKAGES LOGIC ---

@@ -329,7 +329,12 @@
                             </div>
 
                             <div class="d-grid gap-3">
-                                @auth
+                                @auth('influencer')
+                                    <button type="button" class="btn btn-secondary rounded-pill py-3 fw-bold fs-6 text-white" disabled>
+                                        @lang('Message Now')
+                                    </button>
+                                    <small class="text-danger text-center">@lang('Influencers cannot message other influencers.')</small>
+                                @elseauth
                                 <a href="{{ route('user.participant.create.inquiry', $influencer->id) }}" class="btn btn--base rounded-pill py-3 fw-bold fs-6 text-white">
                                  @lang('Message Now')
                                 </a>
@@ -487,7 +492,10 @@
     }
     .rounded-4 { border-radius: 1.25rem !important; }
     .gallery-item img {
-        height: 400px !important;
+        height: 100% !important;
+        width: 100% !important;
+        object-fit: contain !important; /* Prevents zooming/cropping */
+        background-color: #000; /* Black background for non-square images */
         transition: transform 0.3s ease;
     }
     .gallery-item:hover img {

@@ -152,7 +152,7 @@
                                                 <div class="col-md-8">
                                                     <div class="form-group">
                                                         <label class="form--label">{{ __(ucfirst($platform->name)) }} @lang('Link')</label>
-                                                        <input type="url" name="social_link[{{ $platform->id }}]" class="form--control" value="{{ old('social_link.' . $platform->id) }}" placeholder="https://...">
+                                                        <input type="text" name="social_link[{{ $platform->id }}]" class="form--control social-link-input" value="{{ old('social_link.' . $platform->id) }}" placeholder="Profile URL">
                                                     </div>
                                                 </div>
                                                 <div class="col-md-4">
@@ -164,6 +164,7 @@
                                             </div>
                                         </div>
                                     @endforeach
+                                    <small class="text-danger d-none one-social-required-msg text-center mb-3">@lang('At least one social link/follower count is required.')</small>
                                 </div>
 
                                 <div class="col-sm-12">
@@ -308,6 +309,23 @@ updateRegions($('select[name=country]').val());
                     $('#gst-number-container').removeClass('d-none');
                 } else {
                     $('#gst-number-container').addClass('d-none');
+                }
+            });
+
+            $('form').on('submit', function(e) {
+                let hasAtLeastOneSocial = false;
+                $('.social-link-input').each(function() {
+                    if($(this).val() && $(this).val().trim() !== '') {
+                        hasAtLeastOneSocial = true;
+                    }
+                });
+
+                if (!hasAtLeastOneSocial) {
+                    e.preventDefault();
+                    $('.one-social-required-msg').removeClass('d-none');
+                    $('html, body').animate({
+                        scrollTop: $(".one-social-required-msg").offset().top - 200
+                    }, 1000);
                 }
             });
 

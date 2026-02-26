@@ -44,18 +44,7 @@
                     
                 </div>
             @elseif ($influencer->kv == Status::KYC_UNVERIFIED)
-                <div class="alert alert--info" role="alert">
-                    <div class="alert__icon"><i class="fas fa-file-signature"></i></div>
-                    <p class="alert__message">
-                        <span class="fw-bold">@lang('KYC Verification Required')</span><br>
-                        <small>
-                            <i>{{ __(@$kyc->data_values->required) }}
-                                <a class="link-color" href="{{ route('influencer.kyc.form') }}">@lang('Click here')</a>
-                                @lang('to submit KYC information').
-                            </i>
-                        </small>
-                    </p>
-                </div>
+                {{-- KYC Warning Hidden --}}
             @elseif($influencer->kv == Status::KYC_PENDING)
                 <div class="alert alert--warning" role="alert">
                     <div class="alert__icon"><i class="fas fa-user-check"></i></div>
