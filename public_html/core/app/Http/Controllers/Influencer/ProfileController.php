@@ -153,24 +153,7 @@ class ProfileController extends Controller {
                 } catch (\Exception $exp) { }
             }
         }
-        if ($request->cropped_images) {
-    foreach ($request->cropped_images as $base64Data) {
-        // Convert Base64 to a temporary file for your fileUploader
-        $image_data = explode(',', $base64Data);
-        $image_file = base64_decode($image_data[1]);
-        $filename = uniqid() . '.jpg';
-        $path = getFilePath('profileGallery');
-        
-        // Save file
-        file_put_contents($path . '/' . $filename, $image_file);
-        
-        // Save to Database
-        $gallery = new Gallery();
-        $gallery->influencer_id = $influencer->id;
-        $gallery->image = $filename;
-        $gallery->save();
-    }
-}
+
         // Handle Video URL
         if ($request->video_url) {
             $lastSortOrder = \App\Models\ProfileGallery::where('influencer_id', $influencer->id)->max('sort_order') ?? 0;

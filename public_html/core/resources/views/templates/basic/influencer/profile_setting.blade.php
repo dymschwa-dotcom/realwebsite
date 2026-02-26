@@ -372,7 +372,7 @@
         @endif
     <x-confirmation-modal />
 
-    <!-- PASTE AT THE VERY BOTTOM BEFORE @endsection -->
+    {{-- PASTE AT THE VERY BOTTOM BEFORE endsection --}}
 <div class="modal fade" id="cropModal" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
@@ -648,5 +648,6 @@
     })(jQuery);
 </script>
 @endpush
+
 
 
