@@ -58,12 +58,16 @@
                         <a class="nav-link {{ menuActive('campaign.all') }}" href="{{ route('campaign.all') }}" aria-current="page">@lang('Campaigns')</a>
                     </li>
                     @endif
+
+                    @if(auth()->check() || auth()->guard('influencer')->check())
                     <li class="nav-item">
                         <a class="nav-link {{ menuActive('influencer.all') }}" href="{{ route('influencer.all') }}" aria-current="page">@lang('Influencers')</a>
                         </li>
                     <li class="nav-item">
                         <a class="nav-link {{ menuActive('pricing') }}" href="{{ route('pricing') }}">@lang('Pricing')</a>
                     </li>
+                    @endif
+
                     @if (!auth()->check() && !auth()->guard('influencer')->check())
                         <li class="nav-item ">
                             <a class="nav-link {{ menuActive('contact') }}" href="{{ route('contact') }}">@lang('Contact')</a>

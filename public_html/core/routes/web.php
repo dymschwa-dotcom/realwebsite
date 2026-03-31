@@ -27,9 +27,11 @@ Route::controller('CampaignController')->prefix('campaigns')->name('campaign.')-
 });
 
 Route::controller('InfluencerController')->prefix('influencers')->name('influencer.')->group(function () {
-    Route::get('/', 'all')->name('all');
-    Route::get('profile/{name}', 'profile')->name('profile');
-    Route::get('reviews', 'reviews')->name('reviews');
+    Route::middleware(['auth:web,influencer'])->group(function () {
+        Route::get('/', 'all')->name('all');
+        Route::get('profile/{name}', 'profile')->name('profile');
+        Route::get('reviews', 'reviews')->name('reviews');
+    });
 });
 
 Route::controller('SiteController')->group(function () {
