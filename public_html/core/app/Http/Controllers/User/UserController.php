@@ -17,6 +17,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
+use Illuminate\Support\Facades\DB;
+
 class UserController extends Controller {
     public function home() {
         $pageTitle = 'Dashboard';
@@ -160,20 +162,18 @@ class UserController extends Controller {
 
         $countryData  = (array) json_decode(file_get_contents(resource_path('views/partials/country.json')));
         $countryCodes = implode(',', array_keys($countryData));
-        $mobileCodes  = implode(',', array_column($countryData, 'dial_code'));
-        $countries    = implode(',', array_column($countryData, 'country'));
 
         $request->validate([
-            'country_code' => 'required',
-            'country'      => 'required',
-            'mobile_code'  => 'required',
-            'username'     => 'required|unique:users|min:6',
+            'country_code' => 'required|in:' . $countryCodes,
+            'country'      => 'required|string|max:100',
+            'mobile_code'  => 'required|string|max:20',
+            'username'     => 'required|min:6|unique:users,username,' . $user->id,
             'mobile'       => 'required',
             'brand_name'   => 'required|string|max:40',
-            'website'      => 'required|string|max:255',
-            'image'        => ['required', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png'])],
-            'company_name'  => 'nullable|string|max:255',
-            ]);
+            'website'      => 'required|url|max:255',
+            'image'        => [Rule::requiredIf(function() use ($user) { return !$user->image; }), 'image', new FileTypeValidate(['jpeg', 'jpg', 'png'])],
+            'company_name' => 'nullable|string|max:255',
+        ]);
 
         if (preg_match("/[^a-z0-9_]/", trim($request->username))) {
             $notify[] = ['info', 'Username can contain only small letters, numbers and underscore.'];
@@ -181,34 +181,38 @@ class UserController extends Controller {
             return back()->withNotify($notify)->withInput($request->all());
         }
 
-        $user->country_code = $request->country_code;
-        $user->mobile       = $request->mobile;
-        $user->username     = $request->username;
-        $user->brand_name   = $request->brand_name;
-        $user->website      = $request->website;
+        return DB::transaction(function () use ($request, $user) {
+            $user->country_code = $request->country_code;
+            $user->mobile       = $request->mobile;
+            $user->username     = $request->username;
+            $user->brand_name   = $request->brand_name;
+            $user->website      = $request->website;
+            $user->company_name = $request->company_name;
 
-        $user->country_name = @$request->country;
-        $user->dial_code    = $request->mobile_code;
+            $user->country_name = @$request->country;
+            $user->dial_code    = $request->mobile_code;
 
         $user->profile_complete = Status::YES;
 
-        if ($request->hasFile('image')) {
-            try {
-                $user->image = fileUploader($request->image, getFilePath('brand'));
-            } catch (\Exception $exp) {
-                $notify[] = ['error', 'Couldn\'t upload your image'];
-                return back()->withNotify($notify);
+            if ($request->hasFile('image')) {
+                try {
+                    $user->image = fileUploader($request->image, getFilePath('brand'));
+                } catch (\Exception $exp) {
+                    throw new \Exception('Couldn\'t upload your brand logo');
+                }
             }
-        }
 
-        $user->save();
-        if (gs('brand_register_commission')) {
-            ReferralCommission::brandRegisterCommission($user);
-        }
-        recentActivity('Registration process completed successfully', $user->id);
-        $notify[] = ['success', 'Registration process completed successfully'];
+            $user->save();
 
-        return to_route('user.home');
+            if (gs('brand_register_commission')) {
+                ReferralCommission::brandRegisterCommission($user);
+            }
+
+            recentActivity('Registration process completed successfully', $user->id);
+            $notify[] = ['success', 'Welcome aboard! Your brand profile is now complete.'];
+
+            return to_route('user.home')->withNotify($notify);
+        });
     }
 
     public function addDeviceToken(Request $request) {

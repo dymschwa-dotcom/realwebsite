@@ -32,7 +32,7 @@
                                         <div class="form-group">
                                             <label class="form-label">@lang('Username')</label>
                                             <div class="input-group">
-                                                <input type="text" class="form-control form--control checkUser" name="username" value="{{ old('username') }}" required>
+                                                <input type="text" class="form-control form--control checkUser" name="username" value="{{ old('username', $influencer->username) }}" required>
                                                 <span class="input-group-text username-check"></span>
                                             </div>
                                             <small class="text--danger usernameExist"></small>
@@ -44,7 +44,7 @@
         <select name="country" class="form-control form--control select2" required>
             @foreach ($countries as $key => $country)
                 @if(in_array($country->country, ['New Zealand', 'Australia']))
-                    <option data-mobile_code="{{ $country->dial_code }}" value="{{ $country->country }}" data-code="{{ $key }}" @selected($country->country == 'New Zealand')>{{ __($country->country) }}
+                    <option data-mobile_code="{{ $country->dial_code }}" value="{{ $country->country }}" data-code="{{ $key }}" @selected(old('country', $influencer->country_name) == $country->country || (empty(old('country', $influencer->country_name)) && $country->country == 'New Zealand'))>{{ __($country->country) }}
                     </option>
                 @endif
             @endforeach
@@ -70,7 +70,7 @@
                                                 </span>
                                                 <input type="hidden" name="mobile_code">
                                                 <input type="hidden" name="country_code">
-                                                <input type="number" name="mobile" value="{{ old('mobile') }}" class="form-control form--control checkUser"
+                                                <input type="number" name="mobile" value="{{ old('mobile', $influencer->mobile) }}" class="form-control form--control checkUser"
                                                        required>
                                             </div>
                                             <small class="text--danger mobileExist"></small>
@@ -80,7 +80,7 @@
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label class="form-label">@lang('City')</label>
-                                            <input type="text" class="form-control form--control" name="city" value="{{ old('city') }}">
+                                            <input type="text" class="form-control form--control" name="city" value="{{ old('city', $influencer->city) }}">
                                         </div>
                                     </div>
 
@@ -94,7 +94,7 @@
                                                     <label class="custom--check-label" for="male"></label>
                                                     <div class="d-flex gap-2">
                                                         <div class="form--check d-inline-block">
-                                                            <input class="form-check-input" id="male" name="gender" type="radio" value="male" @checked(old('gender') == 'male')>
+                                                            <input class="form-check-input" id="male" name="gender" type="radio" value="male" @checked(old('gender', $influencer->gender) == 'male')>
                                                         </div>
                                                         <span class="title">@lang('Male')</span>
                                                     </div>
@@ -104,7 +104,7 @@
                                                     <label class="custom--check-label" for="female"></label>
                                                     <div class="d-flex gap-2">
                                                         <div class="form--check d-inline-block">
-                                                            <input class="form-check-input" id="female" name="gender" type="radio" value="female" @checked(old('gender') == 'female')>
+                                                            <input class="form-check-input" id="female" name="gender" type="radio" value="female" @checked(old('gender', $influencer->gender) == 'female')>
                                                         </div>
                                                         <span class="title">@lang('Female')</span>
                                                     </div>
@@ -114,7 +114,7 @@
                                                     <label class="custom--check-label" for="other"></label>
                                                     <div class="d-flex gap-2">
                                                         <div class="form--check d-inline-block">
-                                                            <input class="form-check-input" id="other" name="gender" type="radio" value="other" @checked(old('gender') == 'other')>
+                                                            <input class="form-check-input" id="other" name="gender" type="radio" value="other" @checked(old('gender', $influencer->gender) == 'other')>
                                                         </div>
                                                         <span class="title">@lang('Other')</span>
                                                     </div>
@@ -125,7 +125,7 @@
                                     <div class="col-lg-6 col-sm-12">
                                         <div class="form-group">
                                             <label class="form--label">@lang('Date of Birth')</label>
-                                            <input class="form--control" name="birth_date" type="text" value="" autocomplete="off" required>
+                                            <input class="form--control" name="birth_date" type="text" value="{{ old('birth_date', $influencer->birth_date) }}" autocomplete="off" required>
                                         </div>
                                     </div>
                                     <div class="col-sm-12">
@@ -134,8 +134,11 @@
                                             <small class="text--info d-block mb-1">@lang('Choose one or more categories')</small>
                                             <select class="form--control select2-auto-tokenize" name="category[]" multiple
                                                     required>
+                                                @php
+                                                    $oldCategories = old('category', $influencer->categories->pluck('id')->toArray());
+                                                @endphp
                                                 @foreach ($categories as $category)
-                                                    <option value="{{ $category->id }}" @selected(in_array($category->id, old('category') ?? []))>
+                                                    <option value="{{ $category->id }}" @selected(in_array($category->id, $oldCategories))>
                                                         {{ __($category->name) }}
                                                     </option>
                                                 @endforeach
@@ -147,18 +150,21 @@
                                         <small class="text--info d-block mb-2">@lang('Please provide at least one social media link and your follower count.')</small>
                                     </div>
                                     @foreach ($platforms as $platform)
+                                        @php
+                                            $socialLink = $influencer->socialLink->where('platform_id', $platform->id)->first();
+                                        @endphp
                                         <div class="col-sm-12">
                                             <div class="row">
                                                 <div class="col-md-8">
                                                     <div class="form-group">
                                                         <label class="form--label">{{ __(ucfirst($platform->name)) }} @lang('Link')</label>
-                                                        <input type="text" name="social_link[{{ $platform->id }}]" class="form--control social-link-input" value="{{ old('social_link.' . $platform->id) }}" placeholder="Profile URL">
+                                                        <input type="text" name="social_link[{{ $platform->id }}]" class="form--control social-link-input" value="{{ old('social_link.' . $platform->id, @$socialLink->social_link) }}" placeholder="Profile URL">
                                                     </div>
                                                 </div>
                                                 <div class="col-md-4">
                                                     <div class="form-group">
                                                         <label class="form--label">@lang('Followers')</label>
-                                                        <input type="number" name="followers[{{ $platform->id }}]" class="form--control" value="{{ old('followers.' . $platform->id) }}" placeholder="0">
+                                                        <input type="number" name="followers[{{ $platform->id }}]" class="form--control" value="{{ old('followers.' . $platform->id, @$socialLink->followers) }}" placeholder="0">
                                                     </div>
                                                 </div>
                                             </div>
@@ -198,14 +204,15 @@
         // Add this inside the jQuery closure
 const regions = @json(json_decode(file_get_contents(resource_path('views/partials/regions.json')), true));
 
-function updateRegions(country) {
+function updateRegions(country, selectedRegion = null) {
     const regionSelect = $('select[name=region]');
     regionSelect.empty();
     regionSelect.append('<option value="">@lang('Select Region')</option>');
     
     if (regions[country]) {
         regions[country].forEach(function(region) {
-            regionSelect.append(`<option value="${region}">${region}</option>`);
+            const isSelected = region === selectedRegion ? 'selected' : '';
+            regionSelect.append(`<option value="${region}" ${isSelected}>${region}</option>`);
         });
     }
 }
@@ -215,7 +222,7 @@ $('select[name=country]').on('change', function() {
 });
 
 // Initialize on page load
-updateRegions($('select[name=country]').val());
+updateRegions($('select[name=country]').val(), "{{ old('region', $influencer->region) }}");
 
         (function($) {
             "use strict";

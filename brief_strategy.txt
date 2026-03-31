@@ -1,5 +1,15 @@
-Brief Consolidation Plan:
-1. Instead of creating a new database solution, we will enhance the existing 'Campaign Detail' view for both users.
-2. We will create a new partial view 'partials/campaign_brief.blade.php' that consolidates all brief information (basic, content requirements, dates, etc.) into a clean, printable format.
-3. We will include this partial in both 'user/campaign/detail.blade.php' and 'influencer/campaign/detail.blade.php', replacing the scattered lists.
-4. This ensures both parties see the exact same 'Single Source of Truth' brief.
+# Architectural Shift: Next.js Frontend + Headless Laravel Backend
+
+## Background
+The current application is a monolithic Laravel PHP project relying heavily on legacy Bootstrap, jQuery, and global CSS structures. This makes rapid iteration, UI modernization (to achieve a "Collabstr-like" feel), and AI-assisted development incredibly difficult due to tight coupling and side-effects (e.g., CSS specificity conflicts and script loading issues).
+
+## The New Strategy
+We are decoupling the stack. 
+1. **Backend (Laravel API):** The existing Laravel application, database models (over 45+ tables), and backend logic (Payment Gateways, Admin Panel, Queues) will be preserved 100%. We will expose this functionality via clean, secure JSON API endpoints (`routes/api.php`).
+2. **Frontend (Next.js):** We will build a brand-new, standalone Next.js (React/TypeScript) application. This frontend will consume the Laravel API. It will handle all UI/UX (routing, state management, real-time chat UI, modern galleries) using Tailwind CSS. 
+3. **Hosting:** The Next.js frontend will be deployed to Vercel for edge-caching and high performance. The Laravel backend (API) and MariaDB database will remain hosted on a traditional VPS/Containerized environment (e.g., DigitalOcean, Render, or current Docker setup).
+
+## Immediate Next Steps for AI Agent
+1. **API Setup:** Initialize `routes/api.php` in the Laravel project and configure Laravel Sanctum for API authentication (Brands & Influencers).
+2. **First Endpoint:** Create an endpoint (e.g., `/api/influencers/{username}`) that returns the complete Influencer profile data (including galleries, packages, and reviews) as a clean JSON response.
+3. **Next.js Initialization:** Spin up a new Next.js repository (App Router + Tailwind CSS) and build the first highly interactive UI component (e.g., the Influencer Profile Page) consuming the new Laravel API.

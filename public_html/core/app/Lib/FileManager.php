@@ -125,6 +125,7 @@ class FileManager
     * @return void
     */
 	protected function uploadImage(){
+        ini_set('memory_limit', '512M');
         $manager = new ImageManager(new Driver());
         $image = $manager->read($this->file);
 

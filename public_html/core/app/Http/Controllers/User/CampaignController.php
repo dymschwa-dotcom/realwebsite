@@ -16,6 +16,8 @@ use App\Traits\CampaignHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
+use Illuminate\Support\Facades\DB;
+
 class CampaignController extends Controller {
 
     public function index() {
@@ -66,12 +68,14 @@ class CampaignController extends Controller {
         }
 
         // Blocker: Check limit before allowing the user to even see the "Create" page
-        if (!$slug) {
-            $campaignCount = Campaign::where('user_id', $user->id)
-                ->whereIn('status', [Status::CAMPAIGN_APPROVED, Status::CAMPAIGN_PENDING])
-                ->count();
+        $campaignCount = Campaign::where('user_id', $user->id)
+            ->whereIn('status', [Status::CAMPAIGN_APPROVED, Status::CAMPAIGN_PENDING])
+            ->count();
 
             if ($plan && $plan->campaign_limit != -1 && $campaignCount >= $plan->campaign_limit) {
+            // If it's a NEW campaign (no slug), block them.
+            // If it's an existing draft, allow them to finish it.
+            if (!$slug) {
                 $notify[] = ['error', 'You have reached the campaign limit for your current plan. Please upgrade to create more.'];
                 return to_route('pricing')->withNotify($notify);
             }
@@ -109,15 +113,13 @@ class CampaignController extends Controller {
             return response()->json(['error' => ['Please upgrade your plan to create a campaign.']]);
         }
 
-        // 1. Enforce Plan Limits for NEW campaigns
-        if (!$slug) {
-            $campaignCount = Campaign::where('user_id', $user->id)
-                ->whereIn('status', [Status::CAMPAIGN_APPROVED, Status::CAMPAIGN_PENDING])
-                ->count();
+        // 1. Enforce Plan Limits
+        $campaignCount = Campaign::where('user_id', $user->id)
+            ->whereIn('status', [Status::CAMPAIGN_APPROVED, Status::CAMPAIGN_PENDING])
+            ->count();
 
-            if ($plan && $plan->campaign_limit != -1 && $campaignCount >= $plan->campaign_limit) {
-                return response()->json(['error' => ['You have reached the campaign limit for your current plan. Please upgrade to create more.']]);
-            }
+        if (!$slug && $plan && $plan->campaign_limit != -1 && $campaignCount >= $plan->campaign_limit) {
+            return response()->json(['error' => ['You have reached the campaign limit for your current plan. Please upgrade to create more.']]);
         }
 
         // 2. Validate Input Data
@@ -199,17 +201,9 @@ class CampaignController extends Controller {
 
         if ($request->hasFile('image')) {
             try {
-                $campaign->content = fileUploader($request->content, getFilePath('content'), null, @$campaign->content);
+                $campaign->content = fileUploader($request->image, getFilePath('content'), null, @$campaign->content);
             } catch (\Exception $e) {
                 return ['status' => true, 'message' => 'File could not be uploaded'];
-            }
-        } else {
-            if (@$campaign->content) {
-                $filePath = getFilePath('content') . '/' . @$campaign->content;
-                if ($filePath) {
-                    unlink($filePath);
-                }
-                $campaign->content = null;
             }
         }
 
@@ -496,7 +490,7 @@ class CampaignController extends Controller {
 
         $brand = auth()->user();
 
-        if ($brand->plan_id == 1) {
+        if (!$brand->plan || !$brand->plan->can_invite_influencer) {
             $notify[] = ['error', 'Please upgrade your plan to invite influencers.'];
             return to_route('pricing')->withNotify($notify);
         }

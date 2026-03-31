@@ -15,11 +15,21 @@
                             <ul class="login-registration-list d-flex align-items-center flex-wrap">
                                 @if (auth()->check())
                                     <li class="login-registration-list__item">
-                                        <a class="login-registration-list__link btn btn--base btn--sm" href="{{ route('user.home') }}"> <i class="las la-tachometer-alt"></i> @lang('Dashboard')</a>
+                                        @php $user = auth()->user(); @endphp
+                                        @if($user->profile_complete == Status::YES)
+                                            <a class="login-registration-list__link btn btn--base btn--sm" href="{{ route('user.home') }}"> <i class="las la-tachometer-alt"></i> @lang('Dashboard')</a>
+                                        @else
+                                            <a class="login-registration-list__link btn btn--base btn--sm" href="{{ route('user.data') }}"> <i class="las la-user-edit"></i> @lang('Complete Sign Up')</a>
+                                        @endif
                                     </li>
                                 @elseif(auth()->guard('influencer')->check())
                                     <li class="login-registration-list__item">
-                                        <a class="login-registration-list__link btn btn--base btn--sm" href="{{ route('influencer.home') }}"> <i class="las la-tachometer-alt"></i> @lang('Dashboard')</a>
+                                        @php $influencer = auth()->guard('influencer')->user(); @endphp
+                                        @if($influencer->profile_complete == Status::YES && $influencer->profile_step > 2)
+                                            <a class="login-registration-list__link btn btn--base btn--sm" href="{{ route('influencer.home') }}"> <i class="las la-tachometer-alt"></i> @lang('Dashboard')</a>
+                                        @else
+                                            <a class="login-registration-list__link btn btn--base btn--sm" href="{{ route('influencer.data') }}"> <i class="las la-user-edit"></i> @lang('Complete Sign Up')</a>
+                                        @endif
                                     </li>
                                 @else
                                     <li class="login-registration-list__item">
@@ -67,11 +77,21 @@
 
                         @if (auth()->check())
                             <li class="header-login__item">
-                                <a class="btn btn--base btn--sm" href="{{ route('user.home') }}"><i class="las la-tachometer-alt"></i> @lang('Dashboard')</a>
+                                @php $user = auth()->user(); @endphp
+                                @if($user->profile_complete == Status::YES)
+                                    <a class="btn btn--base btn--sm" href="{{ route('user.home') }}"><i class="las la-tachometer-alt"></i> @lang('Dashboard')</a>
+                                @else
+                                    <a class="btn btn--base btn--sm" href="{{ route('user.data') }}"><i class="las la-user-edit"></i> @lang('Complete Sign Up')</a>
+                                @endif
                             </li>
                         @elseif(auth()->guard('influencer')->check())
                             <li class="header-login__item">
-                                <a class="btn btn--base btn--sm" href="{{ route('influencer.home') }}"><i class="las la-tachometer-alt"></i> @lang('Dashboard')</a>
+                                @php $influencer = auth()->guard('influencer')->user(); @endphp
+                                @if($influencer->profile_complete == Status::YES && $influencer->profile_step > 2)
+                                    <a class="btn btn--base btn--sm" href="{{ route('influencer.home') }}"><i class="las la-tachometer-alt"></i> @lang('Dashboard')</a>
+                                @else
+                                    <a class="btn btn--base btn--sm" href="{{ route('influencer.data') }}"><i class="las la-user-edit"></i> @lang('Complete Sign Up')</a>
+                                @endif
                             </li>
                         @else
                             <li class="header-login__item">

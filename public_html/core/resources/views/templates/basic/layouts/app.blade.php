@@ -22,6 +22,7 @@
     @stack('style')
 
     <link href="{{ asset($activeTemplateTrue . 'css/color.php') }}?color={{ gs('base_color') }}" rel="stylesheet">
+    @livewireStyles
 </head>
 
 @php echo loadExtension('google-analytics') @endphp
@@ -65,6 +66,7 @@
     @endif
 
     @stack('script')
+    @livewireScripts
 
     <script>
         (function($) {

@@ -36,6 +36,11 @@ Route::middleware('influencer')->name('influencer.')->group(function () {
     Route::get('packages', 'Influencer\InfluencerController@packages')->name('packages');
     Route::post('packages-submit', 'Influencer\InfluencerController@packagesSubmit')->name('packages.submit');
 
+    Route::post('upload/image-ajax', 'Influencer\InfluencerController@uploadGalleryAjax')->name('gallery.upload.ajax');
+    Route::post('gallery/remove/{id}', 'Influencer\InfluencerController@removeGallery')->name('gallery.remove');
+    Route::post('gallery/sort', 'Influencer\InfluencerController@sortGallery')->name('gallery.sort');
+    Route::post('gallery/add-video', 'Influencer\InfluencerController@addVideoGalleryAjax')->name('gallery.add.video.ajax');
+
     //authorization
     Route::middleware('influencer.registration.complete')->namespace('Influencer')->controller('AuthorizationController')->group(function () {
         Route::get('authorization', 'authorizeForm')->name('authorization');
@@ -147,4 +152,3 @@ Route::middleware('influencer')->name('influencer.')->group(function () {
         });
     });
 });
-

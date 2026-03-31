@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 
+use Illuminate\Support\Facades\DB;
+
 class RegisterController extends Controller {
 
     use RegistersUsers;
@@ -85,62 +87,64 @@ class RegisterController extends Controller {
     }
 
     protected function create(array $data) {
-        $referBy = session()->get('reference');
-        if ($referBy) {
-            $referUser = Influencer::where('referral_code', $referBy)->first();
-        } else {
-            $referUser = null;
-        }
+        return DB::transaction(function () use ($data) {
+            $referBy = session()->get('reference');
+            if ($referBy) {
+                $referUser = Influencer::where('referral_code', $referBy)->first();
+            } else {
+                $referUser = null;
+            }
 
-        $influencer                = new Influencer();
-        $influencer->email         = strtolower($data['email']);
-        $influencer->firstname     = $data['firstname'];
-        $influencer->lastname      = $data['lastname'];
-        $influencer->password      = Hash::make($data['password']);
-        $influencer->ref_by        = $referUser ? $referUser->id : 0;
-        $influencer->referral_code = getTrx();
-        $influencer->kv            = gs('kv') ? Status::NO : Status::YES;
-        $influencer->ev            = gs('ev') ? Status::NO : Status::YES;
-        $influencer->sv            = gs('sv') ? Status::NO : Status::YES;
-        $influencer->ts            = Status::DISABLE;
-        $influencer->tv            = Status::ENABLE;
-        $influencer->save();
+            $influencer                = new Influencer();
+            $influencer->email         = strtolower($data['email']);
+            $influencer->firstname     = $data['firstname'];
+            $influencer->lastname      = $data['lastname'];
+            $influencer->password      = Hash::make($data['password']);
+            $influencer->ref_by        = $referUser ? $referUser->id : 0;
+            $influencer->referral_code = getTrx();
+            $influencer->kv            = gs('kv') ? Status::NO : Status::YES;
+            $influencer->ev            = gs('ev') ? Status::NO : Status::YES;
+            $influencer->sv            = gs('sv') ? Status::NO : Status::YES;
+            $influencer->ts            = Status::DISABLE;
+            $influencer->tv            = Status::ENABLE;
+            $influencer->save();
 
-        $adminNotification                = new AdminNotification();
-        $adminNotification->influencer_id = $influencer->id;
-        $adminNotification->title         = 'New influencer registered';
-        $adminNotification->click_url     = urlPath('admin.users.detail', $influencer->id);
-        $adminNotification->save();
+            $adminNotification                = new AdminNotification();
+            $adminNotification->influencer_id = $influencer->id;
+            $adminNotification->title         = 'New influencer registered';
+            $adminNotification->click_url     = urlPath('admin.users.detail', $influencer->id);
+            $adminNotification->save();
 
-        //Login Log Create
-        $ip              = getRealIP();
-        $exist           = UserLogin::where('influencer_id', $ip)->first();
-        $influencerLogin = new UserLogin();
+            //Login Log Create
+            $ip              = getRealIP();
+            $exist           = UserLogin::where('user_ip', $ip)->first();
+            $influencerLogin = new UserLogin();
 
-        if ($exist) {
-            $influencerLogin->longitude    = $exist->longitude;
-            $influencerLogin->latitude     = $exist->latitude;
-            $influencerLogin->city         = $exist->city;
-            $influencerLogin->country_code = $exist->country_code;
-            $influencerLogin->country      = $exist->country;
-        } else {
-            $info                          = json_decode(json_encode(getIpInfo()), true);
-            $influencerLogin->longitude    = @implode(',', $info['long']);
-            $influencerLogin->latitude     = @implode(',', $info['lat']);
-            $influencerLogin->city         = @implode(',', $info['city']);
-            $influencerLogin->country_code = @implode(',', $info['code']);
-            $influencerLogin->country      = @implode(',', $info['country']);
-        }
+            if ($exist) {
+                $influencerLogin->longitude    = $exist->longitude;
+                $influencerLogin->latitude     = $exist->latitude;
+                $influencerLogin->city         = $exist->city;
+                $influencerLogin->country_code = $exist->country_code;
+                $influencerLogin->country      = $exist->country;
+            } else {
+                $info                          = json_decode(json_encode(getIpInfo()), true);
+                $influencerLogin->longitude    = @implode(',', $info['long']);
+                $influencerLogin->latitude     = @implode(',', $info['lat']);
+                $influencerLogin->city         = @implode(',', $info['city']);
+                $influencerLogin->country_code = @implode(',', $info['code']);
+                $influencerLogin->country      = @implode(',', $info['country']);
+            }
 
-        $influencerAgent                = osBrowser();
-        $influencerLogin->influencer_id = $influencer->id;
-        $influencerLogin->user_ip       = $ip;
+            $influencerAgent                = osBrowser();
+            $influencerLogin->influencer_id = $influencer->id;
+            $influencerLogin->user_ip       = $ip;
 
-        $influencerLogin->browser = @$influencerAgent['browser'];
-        $influencerLogin->os      = @$influencerAgent['os_platform'];
-        $influencerLogin->save();
+            $influencerLogin->browser = @$influencerAgent['browser'];
+            $influencerLogin->os      = @$influencerAgent['os_platform'];
+            $influencerLogin->save();
 
         return $influencer;
+        });
     }
 
     protected function guard() {

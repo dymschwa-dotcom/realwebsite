@@ -30,7 +30,7 @@
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label class="form-label">@lang('Username')</label>
-                                            <input type="text" class="form-control form--control checkUser" name="username" value="{{ old('username') }}" required>
+                                            <input type="text" class="form-control form--control checkUser" name="username" value="{{ old('username', $user->username) }}" required>
                                             <small class="text--danger usernameExist"></small>
                                             <small class="text--success usernameAvailable"></small>
                                         </div>
@@ -40,7 +40,7 @@
                                             <label class="form-label">@lang('Country')</label>
                                             <select name="country" class="form-control form--control select2" required>
                                                 @foreach ($countries as $key => $country)
-                                                    <option data-mobile_code="{{ $country->dial_code }}" value="{{ $country->country }}" data-code="{{ $key }}" @selected($country->country == 'New Zealand')>{{ __($country->country) }}
+                                                    <option data-mobile_code="{{ $country->dial_code }}" value="{{ $country->country }}" data-code="{{ $key }}" @selected(old('country', $user->country_name) == $country->country || (empty(old('country')) && $country->country == 'New Zealand'))>{{ __($country->country) }}
                                                     </option>
                                                 @endforeach
                                             </select>
@@ -56,7 +56,7 @@
                                                 </span>
                                                 <input type="hidden" name="mobile_code">
                                                 <input type="hidden" name="country_code">
-                                                <input type="number" name="mobile" value="{{ old('mobile') }}" class="form-control form--control checkUser"
+                                                <input type="number" name="mobile" value="{{ old('mobile', $user->mobile) }}" class="form-control form--control checkUser"
                                                        required>
                                             </div>
                                             <small class="text--danger mobileExist"></small>
@@ -66,19 +66,19 @@
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label class="form-label">@lang('Brand')</label>
-                                            <input class="form--control" name="brand_name" type="text" value="{{ old('brand_name') }}" required>
+                                            <input class="form--control" name="brand_name" type="text" value="{{ old('brand_name', $user->brand_name) }}" required>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label class="form-label">@lang('Website')</label>
-                                            <input class="form--control" name="website" type="text" value="{{ old('website') }}" required>
+                                            <input class="form--control" name="website" type="text" value="{{ old('website', $user->website) }}" required placeholder="https://example.com">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label class="form-label">@lang('Company Name')</label>
-                                            <input class="form--control" name="company_name" type="text" value="{{ old('company_name') }}">
+                                            <input class="form--control" name="company_name" type="text" value="{{ old('company_name', $user->company_name) }}">
                                         </div>
                                     </div>
                                 </div>

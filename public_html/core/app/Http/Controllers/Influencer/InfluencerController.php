@@ -23,6 +23,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
+use App\Models\InfluencerPackage;
+use App\Models\ProfileGallery;
+use Illuminate\Support\Facades\DB;
+
 class InfluencerController extends Controller {
     public function home() {
         $pageTitle         = 'Dashboard';
@@ -135,7 +139,8 @@ class InfluencerController extends Controller {
     public function influencerData() {
         $influencer = auth()->guard('influencer')->user();
 
-        if ($influencer->profile_complete == Status::YES) {
+        // Allow influencers who are at step 2 to go back to step 1
+        if ($influencer->profile_step > 2) {
             return to_route('influencer.home');
         }
 
@@ -154,31 +159,33 @@ class InfluencerController extends Controller {
 
         $influencer = auth()->guard('influencer')->user();
 
-        if ($influencer->profile_step != 1) {
-            return to_route('influencer.packages');
+        if ($influencer->profile_step > 2) {
+            return to_route('influencer.home');
         }
 
         $countryData  = (array) json_decode(file_get_contents(resource_path('views/partials/country.json')));
         $countryCodes = implode(',', array_keys($countryData));
-        $mobileCodes  = implode(',', array_column($countryData, 'dial_code'));
-        $countries    = implode(',', array_column($countryData, 'country'));
 
         $request->validate([
-            'country_code'  => 'nullable|in:' . $countryCodes,
-            'country'       => 'nullable|in:' . $countries,
-            'mobile_code'   => 'nullable|in:' . $mobileCodes,
-            'username'      => 'required|unique:influencers,username|min:6',
-            'mobile'        => 'nullable',
-            'gender'        => 'nullable|string|in:male,female,other',
-            'birth_date'    => 'nullable|date|date_format:Y-m-d|before:tomorrow',
-            'category'      => 'nullable|array',
-            'social_link'   => 'nullable|array',
-            'social_link.*' => 'nullable|string', // Changed from url to string for leniency
-            'followers'     => 'nullable|array',
+            'country_code'  => 'required|in:' . $countryCodes,
+            'country'       => 'required|string|max:100',
+            'mobile_code'   => 'required|string|max:20',
+            'username'      => 'required|min:6|max:40|unique:influencers,username,' . $influencer->id,
+            'mobile'        => 'required',
+            'gender'        => 'required|string|in:male,female,other',
+            'birth_date'    => 'required|date|date_format:Y-m-d|before:' . now()->subYears(18)->format('Y-m-d'),
+            'category'      => 'required|array|min:1',
+            'social_link'   => 'required|array|min:1',
+            'social_link.*' => 'nullable|string',
+            'followers'     => 'required|array',
             'followers.*'   => 'nullable|integer|min:0',
-            'image'         => ['nullable', 'image', new FileTypeValidate(['jpeg', 'jpg', 'png'])],
+            'image'         => [Rule::requiredIf(function() use ($influencer) { return !$influencer->image; }), 'image', new FileTypeValidate(['jpeg', 'jpg', 'png'])],
         ], [
             'social_link.*.string' => 'Invalid social link format',
+            'category.required'    => 'Please select at least one category',
+            'social_link.required' => 'Please provide at least one social media link',
+            'image.required'       => 'Profile image is required',
+            'birth_date.before'    => 'You must be at least 18 years old to join.',
         ]);
 
         if ($request->username && preg_match("/[^a-z0-9_]/", trim($request->username))) {
@@ -187,126 +194,238 @@ class InfluencerController extends Controller {
             return back()->withNotify($notify)->withInput($request->all());
         }
 
-        $influencer->country_code = $request->country_code;
-        $influencer->mobile       = $request->mobile;
-        $influencer->username     = $request->username;
-        $influencer->gender       = $request->gender;
-        $influencer->birth_date   = $request->birth_date;
+        return DB::transaction(function () use ($request, $influencer) {
+            $influencer->country_code = $request->country_code;
+            $influencer->mobile       = $request->mobile;
+            $influencer->username     = $request->username;
+            $influencer->gender       = $request->gender;
+            $influencer->birth_date   = $request->birth_date;
 
-        $influencer->city         = $request->city;
-        $influencer->region       = $request->region;
-        $influencer->country_name = @$request->country;
-        $influencer->dial_code    = $request->mobile_code;
+            $influencer->city         = $request->city;
+            $influencer->region       = $request->region;
+            $influencer->country_name = @$request->country;
+            $influencer->dial_code    = $request->mobile_code;
 
-        $influencer->profile_complete = Status::YES;
-        $influencer->profile_step     = 2;
+            $influencer->profile_complete = Status::NO; // Keep as NO until Step 2 is finished
+            $influencer->profile_step     = 2;
 
-        if ($request->hasFile('image')) {
-            try {
-                $influencer->image = fileUploader($request->image, getFilePath('influencer'), getFileSize('influencer'), null, getFileThumb('influencer'));
-            } catch (\Exception $exp) {
-                $notify[] = ['error', 'Couldn\'t upload your image'];
-                return back()->withNotify($notify);
+            if ($request->hasFile('image')) {
+                try {
+                    $oldImage = $influencer->image;
+                    $influencer->image = fileUploader($request->image, getFilePath('influencer'), getFileSize('influencer'), $oldImage, getFileThumb('influencer'));
+                } catch (\Exception $exp) {
+                    throw new \Exception('Couldn\'t upload your image');
+                }
             }
-        }
 
         $influencer->save();
 
-        if ($request->category) {
-        $influencer->categories()->sync($request->category);
-        }
+            // Category Sync
+            $influencer->categories()->sync($request->category);
 
-        if ($request->social_link) {
+            // Social Links - Only save if we have a value
+            $influencer->socialLink()->delete(); // Clear old ones if user hit back button
             foreach ($request->social_link as $key => $item) {
-            if ($item) {
-            $social                = new SocialLink();
-            $social->influencer_id = $influencer->id;
-            $social->platform_id   = $key;
-            $social->social_link   = $item;
+                if ($item) {
+                    $social                = new SocialLink();
+                    $social->influencer_id = $influencer->id;
+                    $social->platform_id   = $key;
+                    $social->social_link   = $item;
                     $social->followers     = $request->followers[$key] ?? 0;
-            $social->save();
-        }
-        }
-        }
+                    $social->save();
+                }
+            }
 
-        if (gs('influencer_register_commission')) {
-            ReferralCommission::influencerRegisterCommission($influencer);
-        }
+            if (gs('influencer_register_commission')) {
+                ReferralCommission::influencerRegisterCommission($influencer);
+            }
 
-        recentActivity('Registration process completed successfully', 0, $influencer->id);
-        return to_route('influencer.packages');
+            recentActivity('Registration process completed successfully', 0, $influencer->id);
+            return to_route('influencer.packages');
+        });
     }
 
     public function packages() {
         $influencer = authInfluencer();
-        if ($influencer->profile_step != 2) {
-            return to_route('influencer.home');
+        if ($influencer->profile_step < 2) {
+            return to_route('influencer.data');
         }
         $pageTitle = 'Influencer Packages & Portfolio';
         return view('Template::influencer.packages', compact('pageTitle', 'influencer'));
     }
     public function packagesSubmit(Request $request) {
         $influencer = authInfluencer();
-        if ($influencer->profile_step != 2) {
-            return to_route('influencer.home');
+        if ($influencer->profile_step < 2) {
+            return to_route('influencer.data');
         }
 
         $request->validate([
-            'package'                 => 'nullable|array',
-            'package.*.name'          => 'nullable|string|max:255',
-            'package.*.description'   => 'nullable|string',
-            'package.*.price'         => 'nullable|numeric|min:0',
-            'package.*.platform_id'   => 'nullable|integer',
-            'package.*.delivery_time' => 'nullable|integer|min:1',
-            'package.*.post_count'    => 'nullable|integer|min:1',
+            'package'                 => 'required|array|min:1',
+            'package.*.name'          => 'required|string|max:255',
+            'package.*.description'   => 'required|string',
+            'package.*.price'         => 'required|numeric|min:0',
+            'package.*.platform_id'   => 'required|integer',
+            'package.*.delivery_time' => 'required|integer|min:1',
+            'package.*.post_count'    => 'required|integer|min:1',
             'package.*.video_length'  => 'nullable|integer|min:0',
-            'about'                   => 'nullable|string',
+            'about'                   => 'required|string|min:50',
             'images'                  => 'nullable|array|max:12',
             'images.*'                => ['nullable', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png'])],
+        ], [
+            'package.required' => 'Please add at least one package',
+            'about.required'   => 'The about section is required to introduce yourself',
+            'about.min'        => 'The about section must be at least 50 characters',
         ]);
 
-        if ($request->package) {
+        if ($influencer->galleries->count() < 3 && (!$request->hasFile('images') || count($request->file('images')) + $influencer->galleries->count() < 3)) {
+            $notify[] = ['error', 'Please upload at least 3 portfolio images to showcase your work.'];
+            return back()->withNotify($notify)->withInput();
+        }
+
+        return DB::transaction(function () use ($request, $influencer) {
+            InfluencerPackage::where('influencer_id', $influencer->id)->delete();
+
             foreach ($request->package as $item) {
                 if (empty($item['name']) || !isset($item['price'])) {
                     continue;
                 }
-            $package                = new \App\Models\InfluencerPackage();
-            $package->influencer_id = $influencer->id;
-            $package->name          = $item['name'];
+                $package                = new InfluencerPackage();
+                $package->influencer_id = $influencer->id;
+                $package->name          = $item['name'];
                 $package->description   = @$item['description'] ?? 'No description';
-            $package->price         = $item['price'];
-            $package->platform_id   = @$item['platform_id'];
-            $package->delivery_time = @$item['delivery_time'] ?? 7;
-            $package->post_count    = @$item['post_count'] ?? 1;
-            $package->video_length  = @$item['video_length'];
-            $package->save();
-        }
-        }
+                $package->price         = $item['price'];
+                $package->platform_id   = @$item['platform_id'];
+                $package->delivery_time = @$item['delivery_time'] ?? 7;
+                $package->post_count    = @$item['post_count'] ?? 1;
+                $package->video_length  = @$item['video_length'];
+                $package->save();
+            }
 
-        $influencer->bio          = $request->about;
-        $influencer->profile_step = 3;
-        $influencer->save();
+            $influencer->bio          = $request->about;
+            $influencer->profile_step = 3;
+            $influencer->profile_complete = Status::YES;
+            $influencer->save();
 
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                try {
-                    $newImage = fileUploader($image, getFilePath('profileGallery'), getFileSize('profileGallery'), null, getFileThumb('profileGallery'));
-                    $gallery                = new \App\Models\ProfileGallery();
-                    $gallery->influencer_id = $influencer->id;
-                    $gallery->image         = $newImage;
-                    $gallery->save();
-                } catch (\Exception $exp) {
-                    // Skip failed uploads or handle as needed
+            if ($request->hasFile('images')) {
+                $lastOrder = ProfileGallery::where('influencer_id', $influencer->id)->max('sort_order') ?? 0;
+                foreach ($request->file('images') as $image) {
+                    try {
+                        $newImage = fileUploader($image, getFilePath('profileGallery'), getFileSize('profileGallery'), null, getFileThumb('profileGallery'));
+                        $gallery                = new ProfileGallery();
+                        $gallery->influencer_id = $influencer->id;
+                        $gallery->image         = $newImage;
+                        $gallery->sort_order    = ++$lastOrder;
+                        $gallery->save();
+                    } catch (\Exception $exp) {
+                        throw new \Exception('Failed to upload gallery images');
+                    }
                 }
             }
+
+            $notify[] = ['success', 'Onboarding completed successfully! Your profile is now live.'];
+            return to_route('influencer.home')->withNotify($notify);
+        });
+    }
+
+    public function removeGallery($id) {
+        $gallery = ProfileGallery::where('influencer_id', authInfluencerId())->where('id', $id)->firstOrFail();
+        fileManager()->removeFile(getFilePath('profileGallery') . '/' . $gallery->image);
+        $gallery->delete();
+
+        return response()->json(['success' => true, 'message' => 'Image removed successfully']);
+    }
+
+    public function sortGallery(Request $request) {
+        $request->validate([
+            'sort' => 'required|array',
+            'sort.*' => 'integer'
+        ]);
+
+        foreach ($request->sort as $index => $id) {
+            ProfileGallery::where('influencer_id', authInfluencerId())->where('id', $id)->update(['sort_order' => $index]);
         }
 
-        $notify[] = ['success', 'Packages and portfolio updated successfully'];
-        return to_route('influencer.home')->withNotify($notify);
+        return response()->json(['success' => true]);
+    }
+
+    public function uploadGalleryAjax(Request $request) {
+        $influencer = authInfluencer();
+
+        // Hard Limit: Max 12 items
+        if ($influencer->galleries->count() >= 12) {
+            return response()->json(['success' => false, 'message' => 'Maximum 12 portfolio items allowed']);
+        }
+
+        $request->validate([
+            'image' => ['required', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png'])]
+        ]);
+
+        try {
+            $newImage = fileUploader($request->image, getFilePath('profileGallery'), getFileSize('profileGallery'), null, getFileThumb('profileGallery'));
+            $gallery                = new ProfileGallery();
+            $gallery->influencer_id = $influencer->id;
+            $gallery->image         = $newImage;
+            $gallery->sort_order    = ProfileGallery::where('influencer_id', $influencer->id)->max('sort_order') + 1;
+            $gallery->save();
+
+            return response()->json([
+                'success' => true,
+                'id' => $gallery->id,
+                'src' => getImage(getFilePath('profileGallery') . '/' . $gallery->image)
+            ]);
+        } catch (\Exception $exp) {
+            return response()->json(['success' => false, 'message' => 'Failed to upload image']);
+        }
+    }
+
+    public function addVideoGalleryAjax(Request $request) {
+        $influencer = authInfluencer();
+
+        // Hard Limit: Max 12 items
+        if ($influencer->galleries->count() >= 12) {
+            return response()->json(['success' => false, 'message' => 'Maximum 12 portfolio items allowed']);
+        }
+
+        $request->validate([
+            'video_url' => 'required|url|max:255'
+        ]);
+
+        $videoUrl = $request->video_url;
+        $videoType = 'video';
+        $thumbUrl = null;
+
+        if (strpos($videoUrl, 'youtube.com') !== false || strpos($videoUrl, 'youtu.be') !== false) {
+            $videoType = 'youtube';
+            $thumbUrl = $this->getYoutubeThumbnail($videoUrl);
+        } elseif (strpos($videoUrl, 'vimeo.com') !== false) {
+            $videoType = 'vimeo';
+        }
+
+        $gallery                = new ProfileGallery();
+        $gallery->influencer_id = $influencer->id;
+        $gallery->video_url     = $videoUrl;
+        $gallery->video_type    = $videoType;
+        $gallery->image         = $thumbUrl ?? 'video_default.png'; // Fallback
+        $gallery->sort_order    = ProfileGallery::where('influencer_id', $influencer->id)->max('sort_order') + 1;
+        $gallery->save();
+
+        return response()->json([
+            'success' => true,
+            'id' => $gallery->id,
+            'src' => $gallery->image,
+            'video' => true
+        ]);
+    }
+
+    private function getYoutubeThumbnail($url) {
+        $videoId = "";
+        if (preg_match('%(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\.be/)([^"&?/ ]{11})%i', $url, $match)) {
+            $videoId = $match[1];
+        }
+        return $videoId ? "https://img.youtube.com/vi/$videoId/hqdefault.jpg" : null;
     }
 
     public function addDeviceToken(Request $request) {
-// ... existing code ...
         $validator = Validator::make($request->all(), [
             'token' => 'required',
         ]);
@@ -361,4 +480,3 @@ class InfluencerController extends Controller {
     }
 
 }
-

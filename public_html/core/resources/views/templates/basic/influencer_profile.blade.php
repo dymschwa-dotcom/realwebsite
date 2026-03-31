@@ -463,14 +463,24 @@
         @auth
             const btn = $(this);
             const id = btn.data('id');
-            $.post("{{ route('user.favorite.add') }}", {
+            const isActive = btn.hasClass('active');
+            const url = isActive ? "{{ route('user.favorite.delete') }}" : "{{ route('user.favorite.add') }}";
+
+            $.post(url, {
                 influencerId: id,
                 _token: "{{ csrf_token() }}"
             }, function(response) {
                 if(response.success) {
                     btn.toggleClass('active');
+                    if (typeof notify === 'function') {
+                        notify('success', response.success);
+                    }
                 } else if (response.error) {
-                    alert(response.error);
+                    if (typeof notify === 'function') {
+                        notify('error', response.error);
+                    } else {
+                        alert(response.error);
+                    }
                 }
             });
         @else
